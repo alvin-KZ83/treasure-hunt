@@ -1,0 +1,6 @@
+# Organiser tools (QR codes, drawing template): keep them off the public site.
+tools/
+
+# Windows / OneDrive clutter
+desktop.ini
+Thumbs.db

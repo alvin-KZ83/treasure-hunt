@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Treasure Hunt</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script defer src="js/overlay.js"></script>
+  <script defer src="js/config.js"></script>
+  <script defer src="js/geo.js"></script>
+  <script defer src="js/store.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <div id="map" aria-label="Hunt map"></div>
+  <div id="signal-glow" aria-hidden="true"></div>
+
+  <div id="top">
+    <header id="topbar">
+      <div class="brand">
+        <strong id="hunt-name">Treasure Hunt</strong>
+        <span id="team-label"></span>
+      </div>
+      <button id="btn-finish" class="finish" data-log="finish">Finish</button>
+      <div class="hud">
+        <span class="pill">🏆 <b id="progress">0/14</b></span>
+        <span class="pill" id="timer">⏱ 0:00</span>
+        <span class="pill gps-off" id="gps-pill">GPS off</span>
+      </div>
+    </header>
+    <section id="debug-panel" aria-label="Debug view" hidden>
+      <div class="debug-head">
+        <strong>🛠 Debug</strong>
+        <span id="debug-gps"></span>
+        <button id="btn-debug-close" data-log="debug_close" aria-label="Close debug view">✕</button>
+      </div>
+      <div id="debug-near"></div>
+      <div id="debug-draft"></div>
+      <div class="debug-actions">
+        <button id="btn-debug-mark" data-log="debug_mark">📍 Mark</button>
+        <button id="btn-debug-edit" data-log="debug_edit">✏️ Edit</button>
+        <button id="btn-debug-points" data-log="debug_points">☰ Points <b id="debug-count">0</b></button>
+        <button id="btn-debug-download" data-log="debug_export">⬇ Export</button>
+      </div>
+      <div class="debug-tabs" id="debug-edit-target" hidden>
+        <button id="btn-edit-spots" data-log="debug_edit_spots" class="on">📍 Boundary &amp; spots</button>
+        <button id="btn-edit-drawing" data-log="debug_edit_drawing">🖼 Drawing</button>
+      </div>
+      <div class="debug-actions" id="debug-edit-actions" hidden>
+        <button id="btn-debug-undo" data-log="debug_undo">↶ Undo</button>
+        <button id="btn-debug-simplify" data-log="debug_simplify">〰 Simplify</button>
+        <button id="btn-debug-seethrough" data-log="debug_see_through" hidden>◐ See-through</button>
+        <button id="btn-debug-apply" data-log="debug_apply">▶ Apply</button>
+        <button id="btn-debug-reset" data-log="debug_reset">⟲ Reset</button>
+      </div>
+    </section>
+    <div id="alerts">
+      <div id="boundary-banner" class="banner" role="alert" data-log="boundary_banner" hidden>
+        <div class="arrow" id="boundary-arrow">
+          <svg viewBox="0 0 24 24"><path d="M12 2l7 10h-4.5v10h-5V12H5z"/></svg>
+        </div>
+        <div>
+          <strong>You're outside the hunt area!</strong>
+          <span id="boundary-text"></span>
+        </div>
+      </div>
+      <div id="toasts" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <nav id="controls" aria-label="Map controls">
+    <button id="btn-zoom-in" data-log="zoom_in" aria-label="Zoom in">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button id="btn-zoom-out" data-log="zoom_out" aria-label="Zoom out">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+    </button>
+    <button id="btn-locate" class="active" data-log="locate" aria-label="Follow my location">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="8"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+    </button>
+    <button id="btn-area" data-log="fit_area" aria-label="Show whole hunt area">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button id="btn-debug" data-log="debug_toggle" aria-label="Debug view" hidden>🛠</button>
+  </nav>
+
+  <div id="signal" role="status" hidden>
+    <div class="signal-head">
+      <span class="signal-icon" aria-hidden="true">📡</span>
+      <span>Treasure signal · <b id="signal-name"></b></span>
+      <strong id="signal-level"></strong>
+    </div>
+    <div class="signal-track"><div class="signal-fill"></div></div>
+    <small id="signal-hint" hidden></small>
+  </div>
+
+  <div id="bottombar">
+    <button id="btn-list" class="list-btn" data-log="item_list">☰ Items <b id="list-count">0/14</b></button>
+    <button id="btn-scan" class="scan-btn" data-log="scan_button">📷 <span>Scan QR code</span></button>
+  </div>
+
+  <div id="sheet-backdrop" hidden></div>
+  <section id="sheet" aria-label="Items">
+    <header>
+      <h2>Items</h2>
+      <button id="btn-sheet-close" data-log="item_list_close" aria-label="Close">✕</button>
+    </header>
+    <ol id="item-list"></ol>
+  </section>
+
+  <section id="start-screen" class="overlay" hidden>
+    <div class="card">
+      <div class="logo">🧭</div>
+      <h1 id="start-title">Treasure Hunt</h1>
+      <div id="start-new">
+        <p>Find all <b id="item-total">14</b> items in the area, scan the QR code at each one, then come back to the start.</p>
+        <label for="team-input">Team name</label>
+        <input id="team-input" type="text" maxlength="40" autocomplete="off" placeholder="e.g. Blue Foxes">
+        <button id="btn-start" class="primary big" data-log="start">Start hunt</button>
+      </div>
+      <div id="start-resume" hidden>
+        <p id="resume-text"></p>
+        <button id="btn-resume" class="primary big" data-log="resume">Resume hunt</button>
+        <button id="btn-discard" class="link" data-log="discard">Discard it and start over</button>
+      </div>
+      <ul class="tips">
+        <li>Allow <b>location</b> and <b>camera</b> when Chrome asks.</li>
+        <li>Keep this page open; it keeps the screen awake while tracking.</li>
+        <li>Stay inside the orange dashed boundary.</li>
+      </ul>
+      <div id="start-warnings" class="warnings"></div>
+      <button id="btn-debug-start" class="link" data-log="debug_start" hidden>🛠 Debug / scouting view</button>
+    </div>
+  </section>
+
+  <section id="finish-screen" class="overlay" hidden>
+    <div class="card">
+      <h1>🎉 Hunt complete!</h1>
+      <dl id="finish-summary" class="summary"></dl>
+      <p id="finish-msg"></p>
+      <button id="btn-download" class="primary big" data-log="download_results">⬇ Download results file</button>
+      <button id="btn-new" class="link" data-log="new_hunt">Start a new hunt</button>
+    </div>
+  </section>
+
+  <section id="scanner" aria-label="QR code scanner" hidden>
+    <video id="scan-video" playsinline muted></video>
+    <div class="scan-frame"></div>
+    <header class="scan-top">
+      <button id="btn-scan-close" data-log="scan_close" aria-label="Close scanner">✕</button>
+      <strong id="scan-title">Scan the QR code</strong>
+      <button id="btn-torch" data-log="scan_torch" aria-label="Flashlight" hidden>🔦</button>
+    </header>
+    <footer class="scan-bottom">
+      <p id="scan-status"></p>
+      <button id="btn-scan-manual" data-log="scan_manual">Can’t scan it? Type the code</button>
+    </footer>
+  </section>
+
+  <div id="modal-root" hidden></div>
+  <noscript><p class="fatal">This app needs JavaScript enabled.</p></noscript>
+</body>
+</html>
