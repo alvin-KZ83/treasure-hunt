@@ -130,7 +130,11 @@
 
   // Puzzles from questions.json, one per item in item order (see loadQuestions).
   const QUIZ_TRIES = C.QUIZ_TRIES || 3;
-  const QUIZ_RADIUS = C.QUIZ_REVEAL_RADIUS_M || 20;
+  // Ring radius by the level solved; a plain number counts for both levels.
+  const quizRadius = (level) => {
+    const r = C.QUIZ_REVEAL_RADIUS_M;
+    return (r && typeof r === 'object' ? r[level] : r) || (level === 'hard' ? 10 : 20);
+  };
   const quizProblems = [];
   // Answers match ignoring case, full/half width, spaces and punctuation, and katakana = hiragana.
   const normAnswer = (s) =>
@@ -466,13 +470,7 @@
       const show = isSolved(p.id) && !isFound(p.id);
       if (show && !quizRings[p.id]?._map) {
         (quizRings[p.id] ||= L.layerGroup([
-          L.circle([p.lat, p.lng], {
-            radius: QUIZ_RADIUS,
-            className: "quiz-ring",
-            weight: 2,
-            dashArray: "4 5",
-            interactive: false,
-          }),
+          L.circle([p.lat, p.lng], { radius: quizRadius(quizOf(p.id).solvedLevel), className: 'quiz-ring', weight: 2, dashArray: '4 5', interactive: false }),
           L.marker([p.lat, p.lng], {
             keyboard: false,
             title: p.name,
@@ -1378,38 +1376,73 @@
         : "open";
   const triesLeft = (p) => QUIZ_TRIES - quizOf(p.id).tries;
 
-  // The puzzle picture, answer box and tries left; redrawn after each answer.
+  // Each item's puzzle comes in up to two levels; the team picks one per item
+  // (kept in the session). The tries are shared, so switching gives no extra ones.
+  const QUIZ_LEVELS = [['easy', 'Easy'], ['hard', 'Hard']];
+  const quizLevel = (p) => {
+    const want = quizOf(p.id).level;
+    return p.quiz.levels[want] ? want : QUIZ_LEVELS.map(([l]) => l).find((l) => p.quiz.levels[l]);
+  };
+
+  function setQuizLevel(p, level) {
+    if (quizLevel(p) === level) return;
+    ((state.session.quiz ||= {})[p.id] ||= { tries: 0 }).level = level;
+    log('quiz_level', { poiId: p.id, level });
+    saveSession();
+  }
+
+  // The level switch, puzzle picture, answer box and tries left; redrawn after each answer.
   function quizBox(p, feedback) {
-    const box = document.createElement("div");
-    box.className = "quiz";
-    const img = document.createElement("img");
-    img.className = "quiz-img";
-    img.alt = `Puzzle for ${p.name}`;
-    img.src = p.quiz.image;
+    const box = document.createElement('div');
+    box.className = 'quiz';
+    const level = quizLevel(p);
+    const L1 = p.quiz.levels[level];
+    const st = quizState(p);
+    if (st === 'open' && QUIZ_LEVELS.filter(([l]) => p.quiz.levels[l]).length > 1) {
+      const tabs = document.createElement('div');
+      tabs.className = 'view-tabs';
+      for (const [l, label] of QUIZ_LEVELS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = `${label} · ${quizRadius(l)} m`;
+        b.classList.toggle('on', l === level);
+        b.onclick = () => {
+          setQuizLevel(p, l);
+          box.replaceWith(quizBox(p));
+        };
+        tabs.append(b);
+      }
+      box.append(tabs);
+    }
+    const img = document.createElement('img');
+    img.className = `quiz-img ${level}`;
+    img.alt = `${level === 'easy' ? 'Easy' : 'Hard'} puzzle for ${p.name}`;
+    img.src = L1.image;
     img.onerror = () => {
-      log("quiz_image_error", { poiId: p.id, image: p.quiz.image });
-      const err = document.createElement("p");
-      err.className = "error";
-      err.textContent =
-        "The puzzle picture could not be loaded. Check the internet connection, then close this and open it again.";
+      log('quiz_image_error', { poiId: p.id, level, image: L1.image });
+      const err = document.createElement('p');
+      err.className = 'error';
+      err.textContent = 'The puzzle picture could not be loaded. Check the internet connection, then close this and open it again.';
       img.replaceWith(err);
     };
     box.append(img);
-    if (p.quiz.question) {
-      const q = document.createElement("p");
-      q.className = "quiz-question";
-      q.textContent = p.quiz.question;
+    if (L1.question) {
+      const q = document.createElement('p');
+      q.className = 'quiz-question';
+      q.textContent = L1.question;
       box.append(q);
     }
     const msg = document.createElement("p");
     msg.className = `quiz-msg${feedback ? " error" : ""}`;
     box.append(msg);
-    const st = quizState(p);
-    if (st !== "open") {
-      msg.textContent =
-        st === "solved"
-          ? `✓ Solved! ${p.name} is within ${QUIZ_RADIUS} m of the centre of its ring on the map.`
-          : `✗ No tries left for this puzzle. Follow the treasure signal instead.`;
+    if (st !== 'open') {
+      msg.textContent = st === 'solved'
+        ? `✓ Solved! ${p.name} is within ${quizRadius(quizOf(p.id).solvedLevel)} m of the centre of its ring on the map.`
+        : `✗ No tries left for this puzzle. Follow the treasure signal instead.`;
+      return box;
+    }
+    if (!L1.answers.length) {
+      msg.textContent = 'This puzzle can’t be answered yet. Try the other level.';
       return box;
     }
     const left = triesLeft(p);
@@ -1448,7 +1481,8 @@
     return box;
   }
 
-  // Returns true / false, or null if there was nothing to check (empty, or no tries left).
+  // Checks against the level on screen. Returns true / false, or null if there
+  // was nothing to check (empty, no tries left, or no answer set for that level).
   function answerQuiz(p, text) {
     if (quizState(p) !== "open" || !normAnswer(text)) return null;
     const q = ((state.session.quiz ||= {})[p.id] ||= { tries: 0 });
@@ -1479,7 +1513,9 @@
     return correct;
   }
 
-  // questions.json: one puzzle per item, in item order. Problems end up on the start screen.
+  // questions.json: one puzzle per item, in item order. The top-level "image"
+  // and "answer" are the hard puzzle, "easy": { "image", "answer" } the easy one.
+  // Problems end up on the start screen.
   async function loadQuestions() {
     let list;
     try {
@@ -1494,34 +1530,29 @@
       );
       return;
     }
+    const level = (q) => (q?.image ? {
+      image: String(q.image), question: q.question ? String(q.question) : '',
+      answers: [].concat(q.answer ?? []).map(String).filter((a) => normAnswer(a)),
+    } : null);
+    const unanswered = [];
     list.forEach((q, i) => {
       const p = ITEMS[i];
       if (!p) return;
-      const answers = []
-        .concat(q?.answer ?? [])
-        .map(String)
-        .filter((a) => normAnswer(a));
-      if (!q?.image || !answers.length)
-        quizProblems.push(
-          `questions.json, entry ${i + 1} (for ${p.name}): needs an "image" and an "answer".`,
-        );
-      else
-        p.quiz = {
-          id: q.id ?? null,
-          image: String(q.image),
-          question: q.question ? String(q.question) : "",
-          answers,
-        };
+      const levels = { hard: level(q), easy: level(q?.easy) };
+      for (const [l] of QUIZ_LEVELS) {
+        if (!levels[l]) delete levels[l];
+        else if (!levels[l].answers.length) unanswered.push(`${p.index} (${l})`);
+      }
+      if (!Object.keys(levels).length) quizProblems.push(`questions.json, entry ${i + 1} (for ${p.name}): needs an "image".`);
+      else p.quiz = { id: q.id ?? null, levels };
     });
-    if (list.length > ITEMS.length)
-      quizProblems.push(
-        `questions.json has ${list.length} puzzles but there are only ${ITEMS.length} items; the extra ones are ignored.`,
-      );
+    if (unanswered.length) quizProblems.push(`questions.json: no "answer" yet for items ${unanswered.join(', ')}. Those puzzles show but can’t be answered.`);
+    if (list.length > ITEMS.length) quizProblems.push(`questions.json has ${list.length} puzzles but there are only ${ITEMS.length} items; the extra ones are ignored.`);
   }
 
   // Fetch every puzzle picture once, so the service worker has them when the signal drops.
   function preloadQuizImages() {
-    for (const p of ITEMS) if (p.quiz) new Image().src = p.quiz.image;
+    for (const p of ITEMS) for (const l of Object.values(p.quiz?.levels || {})) new Image().src = l.image;
   }
 
   function showOnMap(p) {
@@ -1815,8 +1846,10 @@
     refreshPins();
     updateHud();
     updateScanButton();
-    alertUser("arrive");
-    toast(`✅ ${p.name} found! ${foundCount()}/${ITEMS.length}`, "ok");
+    alertUser('arrive');
+    toast(`✅ ${p.name} found! ${foundCount()}/${ITEMS.length}`, 'ok');
+    showReward(p);
+    updateRewardBadge();
     if (foundCount() === ITEMS.length) {
       log("all_items_found");
       showModal({
@@ -1826,6 +1859,182 @@
       });
     }
     await saveSession();
+  }
+
+  // ===================================================== REWARD PICTURE
+  // One layer per item (REWARD_LAYERS, {n} = item number), stacked in item
+  // order. After each find the picture is shown full-screen with the layers
+  // of every found item; the new one fades in. Tap to close.
+  const rewardUrl = (p) => C.REWARD_LAYERS.replace('{n}', p.index);
+  const rewardImages = new Map(); // poiId -> Promise<Image | null>
+  const reward = { queue: [], open: null, anim: 0 };
+
+  function rewardImage(p) {
+    if (!rewardImages.has(p.id)) {
+      rewardImages.set(p.id, new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => { log('reward_image_error', { poiId: p.id, url: rewardUrl(p) }); resolve(null); };
+        img.src = rewardUrl(p);
+      }));
+    }
+    return rewardImages.get(p.id);
+  }
+
+  // Load every layer up front, so the picture shows at once (and offline).
+  function preloadReward() {
+    if (C.REWARD_LAYERS) ITEMS.forEach(rewardImage);
+  }
+
+  // p = the item just found (its layer fades in); no p = just look at the picture (the badge).
+  function showReward(p) {
+    if (!C.REWARD_LAYERS) return;
+    reward.queue.push({ p: p || null });
+    if (!reward.open) nextReward();
+  }
+
+  // The badge in the map controls: a thumbnail of the picture so far. Tap = full screen.
+  async function updateRewardBadge() {
+    const btn = $('#btn-reward');
+    btn.hidden = !C.REWARD_LAYERS;
+    if (!C.REWARD_LAYERS) return;
+    $('#reward-count').textContent = `${foundCount()}/${ITEMS.length}`;
+    btn.classList.toggle('glow', !!state.session?.secret?.correct);
+    const imgs = (await Promise.all(ITEMS.map((i) => (isFound(i.id) ? rewardImage(i) : null)))).filter(Boolean);
+    const first = imgs[0] || await rewardImage(ITEMS[0]);
+    if (!first) return;
+    const canvas = $('#reward-thumb');
+    canvas.height = 96; // drawn at 2× for sharp screens
+    canvas.width = Math.round(96 * first.naturalWidth / first.naturalHeight);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const img of imgs) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+
+  function openRewardBadge() {
+    if (!foundCount()) {
+      toast('🖼 Find an item to get the first piece of the picture', 'info', 3500);
+      return;
+    }
+    showReward(null);
+  }
+
+  // After the last find the picture turns over to the secret question
+  // (SECRET): one free-text try. Right → it turns back glowing; wrong → it
+  // turns back without.
+  const secretPending = () => !!C.SECRET && !!state.session && foundCount() === ITEMS.length && !state.session.secret;
+  const secretKeywords = () => (C.SECRET?.keywords || []).map((k) => [].concat(k).map(String)).filter((k) => k.some(normAnswer));
+  const secretNeed = () => C.SECRET?.need || 3;
+  const secretMatches = (text) => {
+    const t = normAnswer(text);
+    return secretKeywords().filter((k) => k.some((w) => normAnswer(w) && t.includes(normAnswer(w)))).map((k) => k[0]);
+  };
+
+  async function nextReward() {
+    const job = reward.queue.shift();
+    reward.open = job || null;
+    if (!job) return;
+    const { p } = job; // null when just looking at the picture
+    const layers = await Promise.all(ITEMS.filter((i) => isFound(i.id)).map(async (i) => ({ p: i, img: await rewardImage(i) })));
+    const drawn = layers.filter((l) => l.img);
+    if (!drawn.length) { nextReward(); return; } // no pictures at all: skip quietly (the errors are logged)
+
+    const canvas = $('#reward-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = drawn[0].img.naturalWidth;
+    canvas.height = drawn[0].img.naturalHeight;
+    const draw = (fresh) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const l of drawn) {
+        ctx.globalAlpha = l.p === p ? fresh : 1;
+        ctx.drawImage(l.img, 0, 0, canvas.width, canvas.height);
+      }
+      ctx.globalAlpha = 1;
+    };
+    draw(0);
+    const final = secretPending() && reward.queue.length === 0;
+    let phase = final ? 'picture' : 'done'; // picture → question → answered → done
+    $('#reward-title').textContent = p ? `✨ ${p.name} found!` : '🖼 Your picture';
+    $('#reward-sub').textContent = `${foundCount()} / ${ITEMS.length} pieces · tap to ${final ? 'turn it over' : p ? 'continue' : 'close'}`;
+    const el = $('#reward');
+    const card = el.querySelector('.reward-card');
+    card.classList.remove('flipped');
+    el.classList.remove('show', 'asking', 'glow', 'secret-lost');
+    el.hidden = false;
+    void el.offsetWidth; // restart the CSS animations
+    el.classList.add('show');
+    const secret = state.session?.secret;
+    if (secret && !final) el.classList.add(secret.correct ? 'glow' : 'secret-lost'); // the finished picture keeps its look
+    log('reward_shown', { poiId: p?.id ?? null, layers: drawn.map((l) => l.p.index), secretNext: final, from: p ? 'found' : 'badge' });
+
+    // The new layer fades in after the picture has popped up.
+    const start = performance.now() + 500;
+    const DURATION = 1400;
+    cancelAnimationFrame(reward.anim);
+    const step = (now) => {
+      const t = Math.min(1, Math.max(0, (now - start) / DURATION));
+      draw(1 - (1 - t) ** 3);
+      if (t < 1) reward.anim = requestAnimationFrame(step);
+    };
+    reward.anim = requestAnimationFrame(step);
+
+    const FLIP_MS = 800;
+    let readyAt = Date.now() + 800; // don't let the tap that confirmed the scan close it
+    const shownAt = Date.now();
+    const input = $('#secret-input');
+
+    const askSecret = () => {
+      phase = 'question';
+      cancelAnimationFrame(reward.anim);
+      draw(1);
+      $('#secret-question').textContent = C.SECRET.question || '';
+      input.value = '';
+      $('#reward-title').textContent = '🔮 One last question…';
+      $('#reward-sub').textContent = '';
+      el.classList.add('asking');
+      card.classList.add('flipped');
+      log('secret_shown');
+      setTimeout(() => input.focus(), FLIP_MS);
+    };
+
+    $('#secret-form').onsubmit = (e) => {
+      e.preventDefault();
+      if (phase !== 'question') return;
+      const text = input.value.trim();
+      if (!normAnswer(text)) { input.focus(); return; }
+      phase = 'answered';
+      input.blur();
+      const matched = secretMatches(text);
+      const correct = matched.length >= secretNeed();
+      state.session.secret = { answer: text.slice(0, 500), correct, matched, at: nowIso() };
+      log('secret_answer', { correct, matched, text: text.slice(0, 500) });
+      saveSession();
+      updateRewardBadge();
+      el.classList.remove('asking');
+      card.classList.remove('flipped');
+      $('#reward-title').textContent = '';
+      setTimeout(() => {
+        phase = 'done';
+        readyAt = Date.now() + 800;
+        el.classList.add(correct ? 'glow' : 'secret-lost');
+        $('#reward-title').textContent = correct ? '🌟 The secret treasure is yours!' : 'The secret stays hidden…';
+        $('#reward-sub').textContent = 'tap to continue';
+        if (correct) alertUser('arrive');
+        else if (C.VIBRATE && navigator.vibrate) navigator.vibrate(60);
+      }, FLIP_MS);
+    };
+
+    el.onclick = () => {
+      if (Date.now() < readyAt) return;
+      if (phase === 'picture') { askSecret(); return; }
+      if (phase !== 'done') return; // the question is up: only its button acts
+      cancelAnimationFrame(reward.anim);
+      draw(1);
+      el.hidden = true;
+      el.classList.remove('show', 'asking', 'glow', 'secret-lost');
+      log('reward_closed', { poiId: p?.id ?? null, shownMs: Date.now() - shownAt });
+      nextReward();
+    };
   }
 
   // ============================================================ RESULTS
@@ -1873,22 +2082,10 @@
       items: ITEMS.map((p) => {
         const r = s.items[p.id] || {};
         return {
-          id: p.id,
-          index: p.index,
-          name: p.name,
-          lat: p.lat,
-          lng: p.lng,
-          radius: p.radius,
-          found: !!r.foundAt,
-          foundAt: r.foundAt || null,
-          method: r.method || null,
-          scanLat: r.lat ?? null,
-          scanLng: r.lng ?? null,
-          scanAcc: r.acc ?? null,
-          scanDistanceM: r.distanceM ?? null,
-          quizId: p.quiz?.id ?? null,
-          quizTries: quizOf(p.id).tries,
-          quizSolvedAt: quizOf(p.id).solvedAt || null,
+          id: p.id, index: p.index, name: p.name, lat: p.lat, lng: p.lng, radius: p.radius,
+          found: !!r.foundAt, foundAt: r.foundAt || null, method: r.method || null,
+          scanLat: r.lat ?? null, scanLng: r.lng ?? null, scanAcc: r.acc ?? null, scanDistanceM: r.distanceM ?? null,
+          quizId: p.quiz?.id ?? null, quizTries: quizOf(p.id).tries, quizSolvedAt: quizOf(p.id).solvedAt || null, quizSolvedLevel: quizOf(p.id).solvedLevel || null,
         };
       }),
       origin: {
@@ -1899,6 +2096,7 @@
         radius: ORIGIN.radius,
       },
       region: REGION,
+      secret: C.SECRET ? { question: C.SECRET.question, ...(s.secret || { answer: null, correct: false }) } : null,
       device: {
         userAgent: navigator.userAgent,
         language: navigator.language,
@@ -2016,6 +2214,12 @@
     updateHud();
     updateScanButton();
     preloadQuizImages();
+    preloadReward();
+    updateRewardBadge();
+    if (secretPending()) { // the app was closed before the secret question was answered: ask again
+      const last = ITEMS.filter((i) => isFound(i.id)).sort((x, y) => Date.parse(state.session.items[x.id].foundAt) - Date.parse(state.session.items[y.id].foundAt)).pop();
+      showReward(last);
+    }
     startGps();
     requestWakeLock();
     state.timers.forEach(clearInterval);
@@ -2081,15 +2285,11 @@
     const s = state.session;
     const gps = await Store.getAll("gps");
     const rows = [
-      ["Team", s.team],
-      ["Items found", `${foundCount()} / ${ITEMS.length}`],
-      [
-        "Time",
-        duration(
-          Date.parse(s.finishedAt || nowIso()) - Date.parse(s.startedAt),
-        ),
-      ],
-      ["Distance walked", Geo.formatDistance(walkedDistance(gps))],
+      ['Team', s.team],
+      ['Items found', `${foundCount()} / ${ITEMS.length}`],
+      ['Time', duration(Date.parse(s.finishedAt || nowIso()) - Date.parse(s.startedAt))],
+      ['Distance walked', Geo.formatDistance(walkedDistance(gps))],
+      ...(C.SECRET ? [['Secret treasure', s.secret ? (s.secret.correct ? '🌟 Found' : '✗ Missed') : '—']] : []),
     ];
     $("#finish-summary").innerHTML = rows
       .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`)
@@ -3274,6 +3474,7 @@
         out.push(`${codes.get(key).name} and ${p.name} have the same QR code.`);
       else codes.set(key, p);
     }
+    if (C.SECRET && secretKeywords().length < secretNeed()) out.push(`SECRET: the answer needs ${secretNeed()} keywords, but only ${secretKeywords().length} are listed, so nobody can get it right. Add them to SECRET.keywords in js/config.js.`);
     return out.concat(quizProblems);
   }
 
@@ -3305,43 +3506,25 @@
   }
 
   function bindUi() {
-    document.addEventListener(
-      "click",
-      (e) => {
-        const el = e.target.closest("[data-log]");
-        if (el) log("ui_tap", { control: el.dataset.log });
-      },
-      true,
-    );
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-log]');
+      if (el) log('ui_tap', { control: el.dataset.log });
+    }, true);
 
-    $("#btn-start").onclick = startHunt;
-    $("#team-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") startHunt();
-    });
-    $("#btn-discard").onclick = () =>
-      discardAndReload(
-        "The hunt in progress on this phone will be deleted, including its logs and GPS track.",
-      );
+    $('#btn-start').onclick = startHunt;
+    $('#team-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') startHunt(); });
+    $('#btn-discard').onclick = () => discardAndReload('The hunt in progress on this phone will be deleted, including its logs and GPS track.');
 
-    $("#btn-zoom-in").onclick = () => {
-      markApp("button_in");
-      map.zoomIn();
-    };
-    $("#btn-zoom-out").onclick = () => {
-      markApp("button_out");
-      map.zoomOut();
-    };
-    $("#btn-locate").onclick = locateMe;
-    $("#btn-area").onclick = () => {
-      setFollow(false, "fit_area");
-      markApp("fit_area");
-      map.fitBounds(regionBounds);
-    };
-    $("#btn-list").onclick = openSheet;
-    $("#btn-sheet-close").onclick = closeSheet;
-    $("#sheet-backdrop").onclick = closeSheet;
-    $("#btn-finish").onclick = confirmFinish;
-    $("#boundary-banner").onclick = () => {
+    $('#btn-zoom-in').onclick = () => { markApp('button_in'); map.zoomIn(); };
+    $('#btn-zoom-out').onclick = () => { markApp('button_out'); map.zoomOut(); };
+    $('#btn-locate').onclick = locateMe;
+    $('#btn-area').onclick = () => { setFollow(false, 'fit_area'); markApp('fit_area'); map.fitBounds(regionBounds); };
+    $('#btn-list').onclick = openSheet;
+    $('#btn-reward').onclick = openRewardBadge;
+    $('#btn-sheet-close').onclick = closeSheet;
+    $('#sheet-backdrop').onclick = closeSheet;
+    $('#btn-finish').onclick = confirmFinish;
+    $('#boundary-banner').onclick = () => {
       if (!state.pos) return;
       const edge = Geo.nearestOnPolygon(state.pos, REGION);
       setFollow(false, "boundary_banner");
@@ -3416,7 +3599,8 @@
 
   // ================================================================ BOOT
   async function boot() {
-    document.documentElement.style.setProperty("--mask", C.MASK_COLOR);
+    document.documentElement.style.setProperty('--mask', C.MASK_COLOR);
+    if (C.QUIZ_RING_COLOR) document.documentElement.style.setProperty('--quiz-ring', C.QUIZ_RING_COLOR);
     document.title = C.HUNT_NAME;
     $("#hunt-name").textContent = C.HUNT_NAME;
     $("#start-title").textContent = C.HUNT_NAME;

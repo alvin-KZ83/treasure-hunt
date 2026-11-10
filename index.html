@@ -292,4 +292,24 @@
     <div id="modal-root" hidden></div>
     <noscript><p class="fatal">This app needs JavaScript enabled.</p></noscript>
   </body>
+  <section id="reward" aria-label="Reward picture" hidden>
+    <div class="reward-rays" aria-hidden="true"></div>
+    <div class="reward-sparks" aria-hidden="true"></div>
+    <h2 id="reward-title"></h2>
+    <div class="reward-card">
+      <div class="reward-face front"><canvas id="reward-canvas"></canvas></div>
+      <form class="reward-face back" id="secret-form" autocomplete="off">
+        <strong>🔮 The secret 14th treasure</strong>
+        <p id="secret-question"></p>
+        <textarea id="secret-input" rows="3" maxlength="500" placeholder="Your answer"></textarea>
+        <small>One try only.</small>
+        <button type="submit" class="primary">Answer</button>
+      </form>
+    </div>
+    <p id="reward-sub"></p>
+  </section>
+
+  <div id="modal-root" hidden></div>
+  <noscript><p class="fatal">This app needs JavaScript enabled.</p></noscript>
+</body>
 </html>
