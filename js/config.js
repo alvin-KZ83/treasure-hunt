@@ -313,7 +313,7 @@ window.HUNT_CONFIG = {
   ],
 
   OVERLAY: {
-    url: 'images/dbz-2.0.png',
+    url: 'images/dbz-3.0.png',
     topLeft:    [36.1109221, 140.0996827],
     topRight:   [36.1109221, 140.1056720],
     bottomLeft: [36.0984766, 140.0996827],
