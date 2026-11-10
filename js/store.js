@@ -1,13 +1,13 @@
 /* Tiny IndexedDB wrapper. Everything is written to the phone as it happens,
  * so a reloaded tab, a crash or a dead signal never loses a hunt. */
 (function () {
-  'use strict';
+  "use strict";
 
-  const DB_NAME = 'treasure-hunt';
+  const DB_NAME = "treasure-hunt";
   const STORES = {
-    meta: {},                         // key/value: the current session
-    events: { autoIncrement: true },  // interaction log
-    gps: { autoIncrement: true },     // GPS fixes
+    meta: {}, // key/value: the current session
+    events: { autoIncrement: true }, // interaction log
+    gps: { autoIncrement: true }, // GPS fixes
   };
 
   let dbPromise;
@@ -17,7 +17,8 @@
         const req = indexedDB.open(DB_NAME, 1);
         req.onupgradeneeded = () => {
           for (const [name, opts] of Object.entries(STORES)) {
-            if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name, opts);
+            if (!req.result.objectStoreNames.contains(name))
+              req.result.createObjectStore(name, opts);
           }
         };
         req.onsuccess = () => resolve(req.result);
@@ -38,10 +39,18 @@
   }
 
   window.Store = {
-    get: (store, key) => run(store, 'readonly', (s) => s.get(key)),
-    put: (store, value, key) => run(store, 'readwrite', (s) => (key === undefined ? s.put(value) : s.put(value, key))),
-    add: (store, value) => run(store, 'readwrite', (s) => s.add(value)),
-    getAll: (store) => run(store, 'readonly', (s) => s.getAll()),
-    clearAll: () => Promise.all(Object.keys(STORES).map((name) => run(name, 'readwrite', (s) => s.clear()))),
+    get: (store, key) => run(store, "readonly", (s) => s.get(key)),
+    put: (store, value, key) =>
+      run(store, "readwrite", (s) =>
+        key === undefined ? s.put(value) : s.put(value, key),
+      ),
+    add: (store, value) => run(store, "readwrite", (s) => s.add(value)),
+    getAll: (store) => run(store, "readonly", (s) => s.getAll()),
+    clearAll: () =>
+      Promise.all(
+        Object.keys(STORES).map((name) =>
+          run(name, "readwrite", (s) => s.clear()),
+        ),
+      ),
   };
 })();
