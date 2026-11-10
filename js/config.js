@@ -313,20 +313,12 @@ window.HUNT_CONFIG = {
   ],
 
   OVERLAY: {
-    url: "images/dbz-1.0.png",
-    topLeft: [36.1110313, 140.0995307],
-    topRight: [36.1109584, 140.1054852],
-    bottomLeft: [36.0982461, 140.0995307],
+    url: 'images/dbz-2.0.png',
+    topLeft:    [36.1109221, 140.0996827],
+    topRight:   [36.1109221, 140.1056720],
+    bottomLeft: [36.0984766, 140.0996827],
     opacity: 1,
     streetMap: true,
-    // 4 warp points from the debug view: [across, down, lat, lng],
-    // across/down = where in the picture, 0–1 (0, 0 = top-left corner).
-    warp: [
-      [0, 0, 36.1110313, 140.0995307],
-      [1, 0, 36.1109584, 140.1054852],
-      [0, 1, 36.0982461, 140.0995307],
-      [1, 1, 36.0984267, 140.1055087],
-    ],
   },
   // Testing without walking: set true, or add ?sim=1 to the URL.
   // Then tapping the map moves your "GPS position" there.
