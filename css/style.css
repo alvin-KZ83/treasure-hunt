@@ -95,7 +95,7 @@ body.has-signal .me-dot {
   background: hsl(var(--signal-hue) 95% 55%);
   transition: width 0.6s ease, background-color 0.6s;
 }
-#signal-hint { display: block; margin-top: 6px; font-size: 13px; font-style: italic; opacity: 0.85; }
+#signal-hint { display: block; white-space: pre-line; margin-top: 6px; font-size: 13px; font-style: italic; opacity: 0.85; }
 
 /* ------------------------------------------------------------ top bar */
 #top { position: fixed; z-index: 1100; top: 0; left: 0; right: 0; pointer-events: none; }
@@ -359,6 +359,22 @@ button.big { padding: 17px; font-size: 18px; margin-top: 18px; }
 }
 .code-input:focus { outline: none; border-color: var(--accent); }
 .modal-body .error { color: var(--danger); }
+
+/* item puzzle (item pop-up) and the ring a solved one shows on the map */
+.view-tabs { display: flex; gap: 3px; padding: 3px; margin: 0 0 12px; border-radius: 12px; background: #f1f5f9; }
+.modal .view-tabs button { flex: 1; margin: 0; padding: 8px 4px; border-radius: 9px; font-size: 14px; color: var(--muted); background: none; }
+.modal .view-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
+.item-view[data-show="puzzle"] .item-hint, .item-view[data-show="hint"] .quiz { display: none; }
+.quiz-img { display: block; width: 100%; max-height: 55dvh; object-fit: contain; border-radius: 12px; background: #f1f5f9; }
+.quiz-question { margin: 10px 0 0; font-weight: 600; }
+.modal-body .quiz-msg { margin: 10px 0 0; }
+.quiz-input {
+  width: 100%; margin-top: 8px; padding: 13px 14px; border-radius: 12px; border: 2px solid var(--line);
+  font: inherit; font-size: 18px; text-align: center;
+}
+.quiz-input:focus { outline: none; border-color: var(--accent); }
+.quiz-ring { stroke: #a855f7; fill: #a855f7; fill-opacity: 0.1; }
+.poi-pin.quiz-pin { width: 30px; height: 30px; font-size: 13px; background: rgba(147, 51, 234, 0.85); border-style: dashed; }
 
 /* --------------------------------------------------------------- modal */
 #modal-root {

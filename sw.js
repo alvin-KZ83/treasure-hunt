@@ -2,11 +2,11 @@
  * tiles that were already viewed. App files are network-first, so edits to
  * config.js show up on the next load while online. js/vendor/jsQR.js is
  * only fetched (and then cached) on phones without a built-in QR decoder. */
-const VERSION = 'hunt-v5';
+const VERSION = 'hunt-v6';
 const TILE_CACHE = 'hunt-tiles-v1';
 const SHELL = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest', 'icons/icon-192.png',
-  'js/config.js', 'js/geo.js', 'js/store.js', 'js/overlay.js', 'js/app.js',
+  'js/config.js', 'questions.json', 'js/geo.js', 'js/store.js', 'js/overlay.js', 'js/app.js',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 ];

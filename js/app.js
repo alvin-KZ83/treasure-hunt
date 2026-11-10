@@ -82,6 +82,15 @@
   for (const p of ITEMS) if (normCode(p.code) && !BY_CODE.has(normCode(p.code))) BY_CODE.set(normCode(p.code), p);
   const itemForCode = (text) => BY_CODE.get(normCode(text)) || null;
 
+  // Puzzles from questions.json, one per item in item order (see loadQuestions).
+  const QUIZ_TRIES = C.QUIZ_TRIES || 3;
+  const QUIZ_RADIUS = C.QUIZ_REVEAL_RADIUS_M || 20;
+  const quizProblems = [];
+  // Answers match ignoring case, full/half width, spaces and punctuation, and katakana = hiragana.
+  const normAnswer = (s) => String(s ?? '').normalize('NFKC').toLowerCase()
+    .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[^\p{L}\p{N}]/gu, '');
+
   const state = {
     session: null,       // persisted in IndexedDB under meta/session
     pos: null,           // latest GPS fix
@@ -102,6 +111,8 @@
   const running = () => state.session?.phase === 'running';
   const isFound = (id) => !!state.session?.items[id]?.foundAt;
   const foundCount = () => ITEMS.filter((p) => isFound(p.id)).length;
+  const quizOf = (id) => state.session?.quiz?.[id] || { tries: 0 }; // { tries, solvedAt }
+  const isSolved = (id) => !!quizOf(id).solvedAt;
   const saveSession = () => Store.put('meta', state.session, 'session');
 
   // =========================================================== LOGGING
@@ -275,7 +286,7 @@
   function popupHtml(p) {
     const status = p === ORIGIN ? 'Start &amp; finish point' : isFound(p.id) ? '✓ Found' : 'Not found yet';
     const dist = state.pos ? ` · ${Geo.formatDistance(Geo.distance(state.pos, p))} away` : '';
-    return `<strong>${esc(p.name)}</strong><br><small>${status}${dist}</small>${p.hint ? `<br>${esc(p.hint)}` : ''}`;
+    return `<strong>${esc(p.name)}</strong><br><small>${status}${dist}</small>${p.hint ? `<br>${esc(p.hint).replace(/\n/g, '<br>')}` : ''}`;
   }
 
   function addPin(p) {
@@ -297,6 +308,27 @@
     for (const p of [ORIGIN, ...ITEMS]) {
       if (pins[p.id]) pins[p.id].setIcon(pinIcon(p));
       else if (isFound(p.id)) addPin(p);
+    }
+    refreshQuizRings();
+  }
+
+  // A solved puzzle shows a ring around its item (like the debug view's)
+  // until the item is found.
+  const quizRings = {}; // poiId -> layer group, made on first use
+  function refreshQuizRings() {
+    for (const p of ITEMS) {
+      const show = isSolved(p.id) && !isFound(p.id);
+      if (show && !quizRings[p.id]?._map) {
+        (quizRings[p.id] ||= L.layerGroup([
+          L.circle([p.lat, p.lng], { radius: QUIZ_RADIUS, className: 'quiz-ring', weight: 2, dashArray: '4 5', interactive: false }),
+          L.marker([p.lat, p.lng], {
+            keyboard: false, title: p.name,
+            icon: L.divIcon({ className: 'pin-icon', html: `<div class="poi-pin quiz-pin">${p.index}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] }),
+          }).on('click', () => { log('poi_tap', { poiId: p.id, ring: 'quiz' }); openItemInfo(p); }),
+        ])).addTo(map);
+      } else if (!show && quizRings[p.id]?._map) {
+        quizRings[p.id].remove();
+      }
     }
   }
 
@@ -777,7 +809,7 @@
     root.onclick = (e) => { if (e.target === root && opts.dismissable !== false) close('backdrop'); };
     root.hidden = false;
     log('notification_shown', { channel: 'modal', id: opts.id, title: opts.title });
-    opts.onOpen?.(box);
+    opts.onOpen?.(box, close);
   }
 
   function setGpsPill(kind, acc) {
@@ -817,6 +849,10 @@
       const li = document.createElement('li');
       li.className = origin ? 'origin' : done ? 'done' : '';
       let sub = origin ? 'Start & finish point' : done ? `Found ${clockTime(rec.foundAt)}${rec.method === 'manual' ? ' · code typed in' : ''}` : 'Not found yet';
+      if (!origin && !done && p.quiz && state.session) {
+        const st = quizState(p);
+        sub += st === 'solved' ? ' · 🧩 solved' : st === 'locked' ? ' · 🧩 no tries left' : ` · 🧩 ${triesLeft(p)}/${QUIZ_TRIES} tries`;
+      }
       if (state.pos && C.REVEAL_POIS && !done) {
         sub += ` · ${Geo.formatDistance(Geo.distance(state.pos, p))} ${Geo.compass(Geo.bearing(state.pos, p))}`;
       }
@@ -828,19 +864,180 @@
     }
   }
 
-  // Small pop-up from the item list: the hint, plus "Show on map" for spots
-  // that are already visible (start, found items, or everything with REVEAL_POIS).
+  // Small pop-up from the item list: the hint, the item's puzzle while it
+  // isn't found, plus "Show on map" for spots that are already visible
+  // (start, found items, solved puzzles' rings, or everything with REVEAL_POIS).
   function openItemInfo(p) {
     const origin = p === ORIGIN;
     const rec = state.session?.items[p.id];
-    log('item_info', { poiId: p.id, hasHint: !!p.hint, found: isFound(p.id) });
-    const body = origin
+    const withQuiz = !origin && !!p.quiz && running() && !isFound(p.id);
+    log('item_info', { poiId: p.id, hasHint: !!p.hint, found: isFound(p.id), quiz: withQuiz ? quizState(p) : undefined });
+    const text = origin
       ? 'This is where the hunt starts and ends. Come back here when you are done and tap Finish.'
-      : `${isFound(p.id) ? `✓ Found at ${clockTime(rec.foundAt)}` : 'Not found yet'}\n\n${p.hint ? `💡 ${p.hint}` : 'No hint for this one. Follow the treasure signal!'}`;
-    const buttons = origin || isFound(p.id) || C.REVEAL_POIS
+      : `${isFound(p.id) ? `✓ Found at ${clockTime(rec.foundAt)}` : 'Not found yet'}\n\n${p.hint ? `💡 ${p.hint}` : withQuiz ? '' : 'No hint for this one. Follow the treasure signal!'}`.trim();
+    let body = text;
+    if (withQuiz) {
+      body = document.createElement('div');
+      body.className = 'item-view';
+      const status = document.createElement('p');
+      status.textContent = isFound(p.id) ? `✓ Found at ${clockTime(rec.foundAt)}` : 'Not found yet';
+      body.append(status);
+      if (p.hint) { // the team picks what to see: puzzle, hint or both
+        const hint = document.createElement('p');
+        hint.className = 'item-hint';
+        hint.textContent = `💡 ${p.hint}`;
+        const tabs = document.createElement('div');
+        tabs.className = 'view-tabs';
+        const show = (view, how) => {
+          body.dataset.show = view;
+          for (const b of tabs.children) b.classList.toggle('on', b.dataset.view === view);
+          if (how) {
+            localStorage.setItem(ITEM_VIEW_KEY, view);
+            log('item_view', { poiId: p.id, show: view });
+          }
+        };
+        for (const [view, label] of [['puzzle', '🧩 Puzzle'], ['hint', '💡 Hint'], ['both', 'Both']]) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.view = view;
+          b.textContent = label;
+          b.onclick = () => show(view, 'tap');
+          tabs.append(b);
+        }
+        body.prepend(tabs);
+        body.append(hint);
+        show(['puzzle', 'hint', 'both'].includes(localStorage.getItem(ITEM_VIEW_KEY)) ? localStorage.getItem(ITEM_VIEW_KEY) : 'both');
+      }
+      body.append(quizBox(p));
+    }
+    const buttons = origin || isFound(p.id) || isSolved(p.id) || C.REVEAL_POIS
       ? [{ label: '📍 Show on map', primary: true, action: () => showOnMap(p) }, { label: 'Close' }]
-      : [{ label: 'OK', primary: true }];
-    showModal({ id: `item_info_${p.id}`, title: origin ? `🏁 ${p.name}` : p.name, body, buttons, compact: true });
+      : [{ label: withQuiz ? 'Close' : 'OK', primary: !withQuiz }];
+    showModal({
+      id: `item_info_${p.id}`, title: origin ? `🏁 ${p.name}` : p.name, body, buttons, compact: !withQuiz,
+      onOpen: withQuiz ? (box, close) => { quizClose = close; } : undefined,
+      onClose: withQuiz ? () => { quizClose = null; } : undefined,
+    });
+  }
+
+  // ------------------------------------------------------------- puzzles
+  let quizClose = null; // closes the open item pop-up, once its puzzle is solved
+  const ITEM_VIEW_KEY = 'hunt-item-view'; // what the item pop-up shows: puzzle, hint or both (kept on the phone)
+  const quizState = (p) => (isSolved(p.id) ? 'solved' : quizOf(p.id).tries >= QUIZ_TRIES ? 'locked' : 'open');
+  const triesLeft = (p) => QUIZ_TRIES - quizOf(p.id).tries;
+
+  // The puzzle picture, answer box and tries left; redrawn after each answer.
+  function quizBox(p, feedback) {
+    const box = document.createElement('div');
+    box.className = 'quiz';
+    const img = document.createElement('img');
+    img.className = 'quiz-img';
+    img.alt = `Puzzle for ${p.name}`;
+    img.src = p.quiz.image;
+    img.onerror = () => {
+      log('quiz_image_error', { poiId: p.id, image: p.quiz.image });
+      const err = document.createElement('p');
+      err.className = 'error';
+      err.textContent = 'The puzzle picture could not be loaded. Check the internet connection, then close this and open it again.';
+      img.replaceWith(err);
+    };
+    box.append(img);
+    if (p.quiz.question) {
+      const q = document.createElement('p');
+      q.className = 'quiz-question';
+      q.textContent = p.quiz.question;
+      box.append(q);
+    }
+    const msg = document.createElement('p');
+    msg.className = `quiz-msg${feedback ? ' error' : ''}`;
+    box.append(msg);
+    const st = quizState(p);
+    if (st !== 'open') {
+      msg.textContent = st === 'solved'
+        ? `✓ Solved! ${p.name} is within ${QUIZ_RADIUS} m of the centre of its ring on the map.`
+        : `✗ No tries left for this puzzle. Follow the treasure signal instead.`;
+      return box;
+    }
+    const left = triesLeft(p);
+    msg.textContent = `${feedback ? `${feedback} ` : ''}${left} ${left === 1 ? 'try' : 'tries'} left.`;
+    const form = document.createElement('form');
+    form.className = 'quiz-form';
+    const input = document.createElement('input');
+    input.className = 'quiz-input';
+    input.placeholder = 'Your answer';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.setAttribute('autocapitalize', 'off');
+    input.maxLength = 100;
+    const btn = document.createElement('button');
+    btn.type = 'submit';
+    btn.className = 'primary';
+    btn.textContent = 'Answer';
+    form.append(input, btn);
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const correct = answerQuiz(p, input.value);
+      if (correct === null) { input.focus(); return; }
+      if (correct) {
+        quizClose?.('solved');
+        showOnMap(p);
+        return;
+      }
+      const next = quizBox(p, '✗ Not quite.');
+      box.replaceWith(next);
+      next.querySelector('input')?.focus();
+    };
+    box.append(form);
+    return box;
+  }
+
+  // Returns true / false, or null if there was nothing to check (empty, or no tries left).
+  function answerQuiz(p, text) {
+    if (quizState(p) !== 'open' || !normAnswer(text)) return null;
+    const q = ((state.session.quiz ||= {})[p.id] ||= { tries: 0 });
+    q.tries++;
+    const correct = p.quiz.answers.some((a) => normAnswer(a) === normAnswer(text));
+    if (correct) q.solvedAt = nowIso();
+    log('quiz_answer', { poiId: p.id, quizId: p.quiz.id, attempt: q.tries, correct, text: String(text).slice(0, 100) });
+    if (correct) {
+      log('quiz_solved', { poiId: p.id, quizId: p.quiz.id, tries: q.tries });
+      refreshQuizRings();
+      alertUser('ok');
+      toast(`🧩 Solved! ${p.name} is somewhere inside the ring`, 'ok');
+    } else {
+      if (C.VIBRATE && navigator.vibrate) navigator.vibrate(60);
+      if (q.tries >= QUIZ_TRIES) log('quiz_locked', { poiId: p.id, quizId: p.quiz.id });
+    }
+    if ($('#sheet').classList.contains('open')) renderList();
+    saveSession();
+    return correct;
+  }
+
+  // questions.json: one puzzle per item, in item order. Problems end up on the start screen.
+  async function loadQuestions() {
+    let list;
+    try {
+      const res = await fetch('questions.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      list = await res.json();
+      if (!Array.isArray(list)) throw new Error('it should be a list: [ { … }, { … } ]');
+    } catch (e) {
+      quizProblems.push(`questions.json could not be read (${e.message}), so there are no puzzles.`);
+      return;
+    }
+    list.forEach((q, i) => {
+      const p = ITEMS[i];
+      if (!p) return;
+      const answers = [].concat(q?.answer ?? []).map(String).filter((a) => normAnswer(a));
+      if (!q?.image || !answers.length) quizProblems.push(`questions.json, entry ${i + 1} (for ${p.name}): needs an "image" and an "answer".`);
+      else p.quiz = { id: q.id ?? null, image: String(q.image), question: q.question ? String(q.question) : '', answers };
+    });
+    if (list.length > ITEMS.length) quizProblems.push(`questions.json has ${list.length} puzzles but there are only ${ITEMS.length} items; the extra ones are ignored.`);
+  }
+
+  // Fetch every puzzle picture once, so the service worker has them when the signal drops.
+  function preloadQuizImages() {
+    for (const p of ITEMS) if (p.quiz) new Image().src = p.quiz.image;
   }
 
   function showOnMap(p) {
@@ -1100,6 +1297,7 @@
           id: p.id, index: p.index, name: p.name, lat: p.lat, lng: p.lng, radius: p.radius,
           found: !!r.foundAt, foundAt: r.foundAt || null, method: r.method || null,
           scanLat: r.lat ?? null, scanLng: r.lng ?? null, scanAcc: r.acc ?? null, scanDistanceM: r.distanceM ?? null,
+          quizId: p.quiz?.id ?? null, quizTries: quizOf(p.id).tries, quizSolvedAt: quizOf(p.id).solvedAt || null,
         };
       }),
       origin: { id: ORIGIN.id, name: ORIGIN.name, lat: ORIGIN.lat, lng: ORIGIN.lng, radius: ORIGIN.radius },
@@ -1167,7 +1365,7 @@
     await Store.clearAll();
     state.session = {
       id: makeSessionId(team), team, phase: 'running', startedAt: nowIso(), finishedAt: null,
-      items: {}, leftOrigin: false, sim: SIM, appVersion: APP_VERSION,
+      items: {}, quiz: {}, leftOrigin: false, sim: SIM, appVersion: APP_VERSION,
     };
     await saveSession();
     flushPreStart();
@@ -1191,6 +1389,7 @@
     refreshPins();
     updateHud();
     updateScanButton();
+    preloadQuizImages();
     startGps();
     requestWakeLock();
     state.timers.forEach(clearInterval);
@@ -1824,7 +2023,7 @@
   // Everything else about each item (name, code, hint…) is kept.
   function configLines() {
     const d = spots();
-    const q = (s) => `'${String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+    const q = (s) => `'${String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')}'`;
     const file = Object.fromEntries(CONFIG_FILE.POIS.map((p) => [p.id, p]));
     const moved = (a, b) => {
       const m = b ? Geo.distance(a, b) : 0;
@@ -1930,7 +2129,7 @@
       else if (codes.has(key)) out.push(`${codes.get(key).name} and ${p.name} have the same QR code.`);
       else codes.set(key, p);
     }
-    return out;
+    return out.concat(quizProblems);
   }
 
   function showStart(saved) {
@@ -2031,6 +2230,7 @@
     bindUi();
     updateHud();
     log('app_load', { appVersion: APP_VERSION, sim: SIM, secure: isSecureContext, overlay: C.OVERLAY?.url ?? null, userAgent: navigator.userAgent });
+    await loadQuestions();
 
     const saved = await Store.get('meta', 'session').catch(() => null);
     if (!saved) {

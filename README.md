@@ -20,7 +20,8 @@ A GPS treasure-hunt app that runs in **Chrome on Android**. Players don't instal
 ```
 index.html               the app
 css/style.css
-js/config.js             ← YOUR HUNT SETTINGS (the only file you need to edit)
+js/config.js             ← YOUR HUNT SETTINGS
+questions.json           the item puzzles, one per item in item order
 js/app.js                map, GPS, alerts, QR scanning, logging, results file
 js/geo.js                distance / inside-area maths
 js/store.js              on-phone storage (IndexedDB)
@@ -43,6 +44,7 @@ tools/hunt-template.png  ready-made template for the current boundary┘
 | `ORIGIN` | Start/finish spot `{ name, lat, lng, radius }` |
 | `POIS` | Your 14 items: `{ id, name, code, lat, lng, hint }`. `id` is letters/numbers only. `code` is the text inside the item's QR code. `radius` overrides `PROXIMITY_RADIUS_M` for one item (optional). `hint` shows when the item is tapped in the item list, and in the signal meter. |
 | `PROXIMITY_RADIUS_M` | Distance at which an item's ring appears and its treasure signal turns on (default 25 m). Phone GPS is usually off by 5–15 m, so 25–40 m works well. |
+| `QUIZ_TRIES`, `QUIZ_REVEAL_RADIUS_M` | Puzzles (see [Item puzzles](#item-puzzles)): wrong answers allowed per puzzle (default 3), and the radius of the ring a solved puzzle shows (default 20 m). |
 | `REVEAL_POIS` | `false` (default) keeps items hidden. `true` shows every item's marker, radius and distance, which is handy for checking your setup. |
 | `OVERLAY` | Your own map drawing, or `null` for none (see [Your own map drawing](#your-own-map-drawing)). Its optional `warp` list (`[across, down, lat, lng]` points) is written by the debug view. |
 | `OUTSIDE_SHADE` | How much to darken the map outside `REGION`: `0` (default) shows it normally, `0.4` dims it, `1` blacks it out. |
@@ -93,6 +95,23 @@ Entering a radius doesn't trigger a pop-up or sound; the ring and meter simply a
 - CSS: `--proximity` (0–1) is set on `<html>`, and `body` has the class `has-signal` while it's on. For example, `.my-thing { opacity: var(--proximity); }`. The existing cues are in `css/style.css` under "treasure signal".
 - JavaScript: `document.addEventListener('hunt:proximity', (e) => { e.detail })` fires on every GPS fix. `e.detail` is `null` or `{ poiId, distance, radius, value }`.
 - In `js/app.js` it is `state.proximity` (section TREASURE SIGNAL).
+
+### Item puzzles
+
+`questions.json` holds one puzzle per item, in item order: the first entry is Item 1's, the second Item 2's, and so on. An item with no entry has no puzzle.
+
+```json
+[
+  { "id": 1562, "image": "https://…/puzzle.png", "answer": "おはらい" },
+  { "image": "images/quiz/02.png", "question": "What is it?", "answer": ["ラクダ", "camel"] }
+]
+```
+
+`image` is the puzzle picture; `answer` is the answer, or a list of accepted answers. Optional: `question` (text under the picture) and `id` (copied into the log). Answers match ignoring upper/lower case, full/half width, spaces and punctuation, and hiragana and katakana count as the same (`オハライ` = `おはらい`).
+
+During the hunt, tapping an item in the item list shows its hint and puzzle with an answer box. A switch at the top (🧩 Puzzle · 💡 Hint · Both) picks what to show; the phone remembers the choice. Each puzzle allows `QUIZ_TRIES` wrong answers. A right answer shows a purple dashed ring of `QUIZ_REVEAL_RADIUS_M` around the item on the map, which stays until the item is found. After the last wrong try the puzzle locks; the item can still be found with the treasure signal.
+
+Pictures on another website only load while the phone is online and that site allows it. For the event, it's safer to save them into `images/quiz/` and point `image` at them; the app then keeps them for offline use.
 
 ### Your own map drawing
 
@@ -198,7 +217,7 @@ One JSON file per team:
     team, sessionId, startedAt, finishedAt, durationSec, itemsFound, itemsTotal,
     distanceWalkedM, gpsFixes, interactionEvents, simulated, device,
     items: [ { id, name, lat, lng, found, foundAt, method: "camera" | "manual",
-               scanLat, scanLng, scanAcc, scanDistanceM }, … ],
+               scanLat, scanLng, scanAcc, scanDistanceM, quizId, quizTries, quizSolvedAt }, … ],
     origin, region
   },
   "events": [ one interaction per line … ],
@@ -223,6 +242,7 @@ Every event has `ts` (ms), `iso` (UTC time), `type`, and `view` = the map viewpo
 | Notifications | `notification_shown` / `notification_dismissed` (`channel`: toast / modal / banner, `id`, `how`: tap / timeout / button / backdrop, `button`) |
 | Geofence | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found` |
 | Treasure signal | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`) |
+| Puzzles | `quiz_answer` (`attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `item_view` (`show`: puzzle / hint / both) |
 | QR codes | `qr_scan_open`, `qr_camera_ready` (`decoder`), `qr_camera_error`, `qr_scan` (`result`: found / already_found / unknown, `method`: camera / manual), `item_found` (`distanceM`, `acc`), `qr_manual_open`, `qr_torch`, `qr_scan_close` (`how`) |
 | GPS | `gps_watch_start`, `gps_first_fix`, `gps_error`, `gps_watch_stop` |
 | Session & app | `app_load`, `session_start`, `session_resume`, `finish_prompt`, `session_finish`, `app_visibility`, `wakelock_on` / `_off`, `network`, `orientation`, `page_hide`, `overlay_error` (drawing file missing), `js_error` |
@@ -234,7 +254,7 @@ Events from before **Start** (e.g. exploring the map) are kept and marked `"buff
 
 ## Notes and limits
 
-- **The codes are visible in `js/config.js`** to anyone who opens the page source. That's fine for a friendly hunt. If cheating matters, compare `scanDistanceM` in the results file.
+- **The codes (and puzzle answers in `questions.json`) are visible** to anyone who opens the page source. That's fine for a friendly hunt. If cheating matters, compare `scanDistanceM` in the results file.
 - **Map tiles** come from OpenStreetMap's free server, which is fine for a hunt with a few teams. For a large public event, use a provider with an API key (MapTiler, Stadia, Thunderforest) and set `TILE_URL` and `TILE_ATTRIBUTION`.
 - **Background tracking** isn't possible for web apps on Android, so the screen must stay on (see above).
 - iPhone Safari mostly works (it uses the jsQR decoder), but the app is built and tested for Chrome on Android.
