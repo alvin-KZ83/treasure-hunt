@@ -46,8 +46,8 @@ window.HUNT_CONFIG = {
   // Answers match ignoring case, spaces, punctuation and hiragana/katakana.
   // A right answer shows a ring around that item until it is found: wider
   // for the easy puzzle, tighter for the hard one.
-  QUIZ_TRIES: 3,             // wrong answers allowed per puzzle (shared by both levels)
-  QUIZ_REVEAL_RADIUS_M: { easy: 20, hard: 10 },  // radius of that ring, by the level solved
+  QUIZ_TRIES: 3, // wrong answers allowed per puzzle (shared by both levels)
+  QUIZ_REVEAL_RADIUS_M: { easy: 20, hard: 10 }, // radius of that ring, by the level solved
 
   // ---- Reward picture ------------------------------------------------------
   // Every found item adds its layer to a picture, shown full-screen right
@@ -55,7 +55,7 @@ window.HUNT_CONFIG = {
   // ({n} = item number). Layers are stacked in item order and stretched to the
   // size of the first one, so make them all the same size, transparent where
   // empty. null = no reward picture.
-  REWARD_LAYERS: 'reward/{n}.png',
+  REWARD_LAYERS: "reward/{n}.png",
 
   // ---- Secret 14th treasure ----------------------------------------------
   // Once every item is found, the reward picture flips over to one last
@@ -65,8 +65,8 @@ window.HUNT_CONFIG = {
   // ignored. One try: right → the picture flips back glowing, wrong → it
   // flips back without. null = no secret question.
   SECRET: {
-    question: 'What is kansei?',
-    keywords: ['alpha', 'bravo', 'charlie'],   // e.g. ['感じる', ['こころ', '心'], 'うつくしさ']
+    question: "What is kansei?",
+    keywords: ["alpha", "bravo", "charlie"], // e.g. ['感じる', ['こころ', '心'], 'うつくしさ']
     need: 3,
   },
 
@@ -92,8 +92,8 @@ window.HUNT_CONFIG = {
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   MAX_ZOOM: 19,
   OUTSIDE_SHADE: 0.55, // darkening outside REGION: 0 = shown normally, 0.4 = dimmed, 1 = blacked out
-  MASK_COLOR: '#1e293b',      // colour of that shading (and behind the map while tiles load)
-  QUIZ_RING_COLOR: '#a855f7', // ring (and its number) a solved puzzle shows around its item
+  MASK_COLOR: "#1e293b", // colour of that shading (and behind the map while tiles load)
+  QUIZ_RING_COLOR: "#a855f7", // ring (and its number) a solved puzzle shows around its item
 
   // ---- Your own map drawing (optional) ---------------------------------
   // A PNG or JPG laid over the street map, pinned by three of its corners
