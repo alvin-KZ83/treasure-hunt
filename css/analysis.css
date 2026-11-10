@@ -1,0 +1,253 @@
+/* ============================================================
+   TREASURE HUNT ANALYTICS — STYLES
+   ============================================================ */
+
+/* 1. COLORS & GENERAL SETTINGS */
+
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --ink: #172033;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #0d9488;
+  --accent-light: #ccfbf1;
+
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* 2. HEADER */
+
+.dashboard-header {
+  background: #172033;
+  color: white;
+  padding: 28px max(24px, calc((100% - 1200px) / 2));
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.dashboard-header p {
+  margin: 8px 0 0;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+/* 3. MAIN LAYOUT */
+
+.dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.dashboard section {
+  margin-bottom: 32px;
+}
+
+.dashboard h2 {
+  margin: 0 0 18px;
+  font-size: 21px;
+}
+
+.dashboard h3 {
+  margin: 0 0 18px;
+  font-size: 16px;
+}
+
+/* 4. JSON UPLOAD */
+
+.upload-section {
+  background: var(--surface);
+  padding: 28px;
+  border: 2px dashed var(--border);
+  border-radius: 18px;
+}
+
+.upload-section p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+#json-upload {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  margin-top: 20px;
+  font: inherit;
+  font-size: 14px;
+}
+
+#json-upload::file-selector-button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  padding: 11px 16px;
+  margin-right: 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#json-upload::file-selector-button:hover {
+  background: #0f766e;
+}
+
+#upload-status {
+  margin-bottom: 0;
+}
+
+/* 5. SUMMARY CARDS */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+}
+
+.metric-value {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* 6. CHARTS */
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 0;
+}
+
+.chart-card:last-child {
+  grid-column: 1 / -1;
+}
+
+/* Prevent charts from growing indefinitely */
+.chart-card canvas {
+  display: block;
+  width: 100% !important;
+  max-height: 300px;
+}
+
+/* 7. BEHAVIOR PATTERNS */
+
+#behavior-patterns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pattern-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.pattern-card h3 {
+  margin: 0 0 10px;
+}
+
+.pattern-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 8. RESPONSIVE LAYOUT */
+
+@media (max-width: 800px) {
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card:last-child {
+    grid-column: auto;
+  }
+
+  #behavior-patterns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding: 22px 18px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 23px;
+  }
+
+  .dashboard {
+    padding: 22px 14px 40px;
+  }
+
+  .upload-section,
+  .chart-card {
+    padding: 18px;
+  }
+
+  .metric-card {
+    padding: 16px;
+  }
+
+  .metric-value {
+    font-size: 25px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+  }
+}

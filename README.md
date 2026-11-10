@@ -40,18 +40,18 @@ tools/hunt-template.png  ready-made template for the current boundary┘
 
 ## 1. Set up your hunt: `js/config.js`
 
-| Setting | What to put |
-|---|---|
-| `REGION` | The hunt area: any polygon, with as many corners as you need (see below). |
-| `ORIGIN` | Start/finish spot `{ name, lat, lng, radius }` |
-| `POIS` | Your 14 items: `{ id, name, code, lat, lng, hint }`. `id` is letters/numbers only. `code` is the text inside the item's QR code. `radius` overrides `PROXIMITY_RADIUS_M` for one item (optional). `hint` shows when the item is tapped in the item list, and in the signal meter. |
-| `PROXIMITY_RADIUS_M` | Distance at which an item's ring appears and its treasure signal turns on (default 25 m). Phone GPS is usually off by 5–15 m, so 25–40 m works well. |
-| `QUIZ_TRIES`, `QUIZ_REVEAL_RADIUS_M` | Puzzles (see [Item puzzles](#item-puzzles)): wrong answers allowed per puzzle (default 3), and the radius of the ring a solved puzzle shows, by level: `{ easy: 20, hard: 10 }` (a single number counts for both). |
-| `BOUNDARY_COLOR`, `QUIZ_RING_COLOR` | Colours of the dashed hunt boundary and of a solved puzzle's ring and its number, e.g. `'#f97316'`. |
-| `REVEAL_POIS` | `false` (default) keeps items hidden. `true` shows every item's marker, radius and distance, which is handy for checking your setup. |
-| `OVERLAY` | Your own map drawing, or `null` for none (see [Your own map drawing](#your-own-map-drawing)). Its optional `warp` list (`[across, down, lat, lng]` points) is written by the debug view. |
-| `OUTSIDE_SHADE` | How much to darken the map outside `REGION`: `0` (default) shows it normally, `0.4` dims it, `1` blacks it out. |
-| `DEBUG_TOOLS` | `true` shows the 🛠 debug / scouting button. **Set it to `false` before the event**, so players can't see where the items are. |
+| Setting                              | What to put                                                                                                                                                                                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGION`                             | The hunt area: any polygon, with as many corners as you need (see below).                                                                                                                                                                                                         |
+| `ORIGIN`                             | Start/finish spot `{ name, lat, lng, radius }`                                                                                                                                                                                                                                    |
+| `POIS`                               | Your 14 items: `{ id, name, code, lat, lng, hint }`. `id` is letters/numbers only. `code` is the text inside the item's QR code. `radius` overrides `PROXIMITY_RADIUS_M` for one item (optional). `hint` shows when the item is tapped in the item list, and in the signal meter. |
+| `PROXIMITY_RADIUS_M`                 | Distance at which an item's ring appears and its treasure signal turns on (default 25 m). Phone GPS is usually off by 5–15 m, so 25–40 m works well.                                                                                                                              |
+| `QUIZ_TRIES`, `QUIZ_REVEAL_RADIUS_M` | Puzzles (see [Item puzzles](#item-puzzles)): wrong answers allowed per puzzle (default 3), and the radius of the ring a solved puzzle shows, by level: `{ easy: 20, hard: 10 }` (a single number counts for both).                                                                |
+| `BOUNDARY_COLOR`, `QUIZ_RING_COLOR`  | Colours of the dashed hunt boundary and of a solved puzzle's ring and its number, e.g. `'#f97316'`.                                                                                                                                                                               |
+| `REVEAL_POIS`                        | `false` (default) keeps items hidden. `true` shows every item's marker, radius and distance, which is handy for checking your setup.                                                                                                                                              |
+| `OVERLAY`                            | Your own map drawing, or `null` for none (see [Your own map drawing](#your-own-map-drawing)). Its optional `warp` list (`[across, down, lat, lng]` points) is written by the debug view.                                                                                          |
+| `OUTSIDE_SHADE`                      | How much to darken the map outside `REGION`: `0` (default) shows it normally, `0.4` dims it, `1` blacks it out.                                                                                                                                                                   |
+| `DEBUG_TOOLS`                        | `true` shows the 🛠 debug / scouting button. **Set it to `false` before the event**, so players can't see where the items are.                                                                                                                                                    |
 
 ### Drawing the boundary polygon
 
@@ -82,12 +82,12 @@ Items are never drawn on the map. The app keeps one **proximity variable** for t
 
 What the team sees, all driven by that value (none of it points towards the item):
 
-| Value | Signal meter | Screen edge | Player's dot |
-|---|---|---|---|
-| 0 – 0.25 | 📡 bar, "Faint" | yellow glow | yellow, slow pulse |
-| 0.25 – 0.5 | "Warm" | orange | orange |
-| 0.5 – 0.7 | "Hot" | red-orange, stronger | faster, bigger rings |
-| 0.7 – 1 | "Very hot — look around!" | deep red, fast | red, fast |
+| Value      | Signal meter              | Screen edge          | Player's dot         |
+| ---------- | ------------------------- | -------------------- | -------------------- |
+| 0 – 0.25   | 📡 bar, "Faint"           | yellow glow          | yellow, slow pulse   |
+| 0.25 – 0.5 | "Warm"                    | orange               | orange               |
+| 0.5 – 0.7  | "Hot"                     | red-orange, stronger | faster, bigger rings |
+| 0.7 – 1    | "Very hot — look around!" | deep red, fast       | red, fast            |
 
 Entering a radius doesn't trigger a pop-up or sound; the ring and meter simply appear. The phone gives a short buzz when the level steps up. With a 25 m radius and typical phone GPS, the value standing right at the spot usually reads 0.6–0.9, not exactly 1.
 
@@ -105,9 +105,20 @@ Entering a radius doesn't trigger a pop-up or sound; the ring and meter simply a
 
 ```json
 [
-  { "id": 1562, "image": "https://…/puzzle.png", "answer": "おはらい",
-    "easy": { "image": "puzzle/Easy 01/1_question (Slide 3).png", "answer": "6" } },
-  { "image": "images/quiz/02.png", "question": "What is it?", "answer": ["ラクダ", "camel"] }
+  {
+    "id": 1562,
+    "image": "https://…/puzzle.png",
+    "answer": "おはらい",
+    "easy": {
+      "image": "puzzle/Easy 01/1_question (Slide 3).png",
+      "answer": "6"
+    }
+  },
+  {
+    "image": "images/quiz/02.png",
+    "question": "What is it?",
+    "answer": ["ラクダ", "camel"]
+  }
 ]
 ```
 
@@ -245,18 +256,18 @@ To analyse it in Python: `pd.DataFrame(json.load(open(path))["events"])`, and th
 
 Every event has `ts` (ms), `iso` (UTC time), `type`, and `view` = the map viewport at that moment (`zoom`, centre `lat`/`lng`, `bounds` [S, W, N, E]).
 
-| Group | Events |
-|---|---|
-| Map | `view_change` (`source`: `user`, `follow`, `button_in`, `fit_area`, `list_select`…), `zoom` (`from`, `to`, `trigger`: `pinch` / `double_tap` / `wheel` / `button_in` / `button_out` / `follow` / …), `pan_start`, `pan_end` (`distancePx`), `map_tap`, `map_long_press`, `poi_tap`, `popup_close`, `follow_on` / `follow_off` (`reason`), `map_resize` |
-| Buttons & screens | `ui_tap` (`control`), `list_open`, `list_close`, `item_info` (hint pop-up opened: `poiId`, `hasHint`, `found`), `list_select` ("Show on map" in that pop-up) |
-| Notifications | `notification_shown` / `notification_dismissed` (`channel`: toast / modal / banner, `id`, `how`: tap / timeout / button / backdrop, `button`) |
-| Geofence | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found` |
-| Treasure signal | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`) |
-| Puzzles | `quiz_answer` (`level`, `attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `quiz_level` (`level`: easy / hard), `item_view` (`show`: puzzle / hint / both) |
-| Reward picture | `reward_shown` (`layers`: item numbers on), `reward_closed` (`shownMs`), `reward_image_error`, `secret_shown`, `secret_answer` (`correct`, `matched`, `text`) |
-| QR codes | `qr_scan_open`, `qr_camera_ready` (`decoder`), `qr_camera_error`, `qr_scan` (`result`: found / already_found / unknown, `method`: camera / manual), `item_found` (`distanceM`, `acc`), `qr_manual_open`, `qr_torch`, `qr_scan_close` (`how`) |
-| GPS | `gps_watch_start`, `gps_first_fix`, `gps_error`, `gps_watch_stop` |
-| Session & app | `app_load`, `session_start`, `session_resume`, `finish_prompt`, `session_finish`, `app_visibility`, `wakelock_on` / `_off`, `network`, `orientation`, `page_hide`, `overlay_error` (drawing file missing), `js_error` |
+| Group                                   | Events                                                                                                                                                                                                                                                                                                                                                             |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Map                                     | `view_change` (`source`: `user`, `follow`, `button_in`, `fit_area`, `list_select`…), `zoom` (`from`, `to`, `trigger`: `pinch` / `double_tap` / `wheel` / `button_in` / `button_out` / `follow` / …), `pan_start`, `pan_end` (`distancePx`), `map_tap`, `map_long_press`, `poi_tap`, `popup_close`, `follow_on` / `follow_off` (`reason`), `map_resize`             |
+| Buttons & screens                       | `ui_tap` (`control`), `list_open`, `list_close`, `item_info` (hint pop-up opened: `poiId`, `hasHint`, `found`), `list_select` ("Show on map" in that pop-up)                                                                                                                                                                                                       |
+| Notifications                           | `notification_shown` / `notification_dismissed` (`channel`: toast / modal / banner, `id`, `how`: tap / timeout / button / backdrop, `button`)                                                                                                                                                                                                                      |
+| Geofence                                | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found`                                                                                                                                                                                                                                                         |
+| Treasure signal                         | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`)                                                                                                                                   |
+| Puzzles                                 | `quiz_answer` (`level`, `attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `quiz_level` (`level`: easy / hard), `item_view` (`show`: puzzle / hint / both)                                                                                                                                                                 |
+| Reward picture                          | `reward_shown` (`layers`: item numbers on), `reward_closed` (`shownMs`), `reward_image_error`, `secret_shown`, `secret_answer` (`correct`, `matched`, `text`)                                                                                                                                                                                                      |
+| QR codes                                | `qr_scan_open`, `qr_camera_ready` (`decoder`), `qr_camera_error`, `qr_scan` (`result`: found / already_found / unknown, `method`: camera / manual), `item_found` (`distanceM`, `acc`), `qr_manual_open`, `qr_torch`, `qr_scan_close` (`how`)                                                                                                                       |
+| GPS                                     | `gps_watch_start`, `gps_first_fix`, `gps_error`, `gps_watch_stop`                                                                                                                                                                                                                                                                                                  |
+| Session & app                           | `app_load`, `session_start`, `session_resume`, `finish_prompt`, `session_finish`, `app_visibility`, `wakelock_on` / `_off`, `network`, `orientation`, `page_hide`, `overlay_error` (drawing file missing), `js_error`                                                                                                                                              |
 | Debug view (only if used during a hunt) | `debug_view` (`on`), `debug_mark` (`id`, `for`, `lat`, `lng`, `acc`, `fixes`), `debug_edit_mode` (`on`), `debug_edit_target` (`target`: spots / drawing), `debug_edit` (`what`: move corner / add corner / delete corner / move item01 / simplify 8 m / drawing: add point / drawing: move point / undo / reset…), `debug_apply`, `debug_delete`, `debug_download` |
 
 The summary's `positionsFrom` says whether that phone used `js/config.js` or debug-view edits.
