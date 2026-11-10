@@ -23,6 +23,7 @@ css/style.css
 js/config.js             ← YOUR HUNT SETTINGS
 questions.json           the item puzzles, one per item in item order
 puzzle/                  pictures for the easy puzzles (Easy 01 = Item 1)
+reward/                  the reward picture's layers: 1.png = Item 1's, …
 js/app.js                map, GPS, alerts, QR scanning, logging, results file
 js/geo.js                distance / inside-area maths
 js/store.js              on-phone storage (IndexedDB)
@@ -115,6 +116,12 @@ Entering a radius doesn't trigger a pop-up or sound; the ring and meter simply a
 During the hunt, tapping an item in the item list shows its hint and puzzle with an answer box. A switch at the top (🧩 Puzzle · 💡 Hint · Both) picks what to show; the phone remembers the choice. Items with both levels also get an **Easy · Hard** switch above the picture (Easy to begin with), remembered per item. Both levels share the same tries, so switching doesn't give extra ones. Each puzzle allows `QUIZ_TRIES` wrong answers. A right answer shows a dashed ring in `QUIZ_RING_COLOR` around the item on the map: a 20 m radius for an easy puzzle, 10 m for a hard one (`QUIZ_REVEAL_RADIUS_M`; the switch shows each level's size), which stays until the item is found. After the last wrong try the puzzle locks; the item can still be found with the treasure signal.
 
 Pictures on another website only load while the phone is online and that site allows it. For the event, it's safer to save them into `images/quiz/` and point `image` at them; the app then keeps them for offline use.
+
+### Reward picture
+
+Every found item adds a piece to a bigger picture. Right after a find, the picture fills the screen with every found item's layer on, and the new piece fades in; the team taps to continue. Put one PNG per item in `reward/`, named by item number (`1.png` for Item 1, `2.png` for Item 2…). They are stacked in item order, so make them all the same size, transparent everywhere except their own piece. `REWARD_LAYERS` in `config.js` sets the file names (`'reward/{n}.png'`), or `null` turns the picture off. The layers are loaded when the hunt starts, so they show even with no signal.
+
+**The secret 14th treasure.** After the last item is found, tapping the finished picture turns it over to one last question (`SECRET.question` in `config.js`). The team types a free answer and gets **one try**: it counts if it contains at least `SECRET.need` (3) different words from `SECRET.keywords`. A keyword can be a list of ways to write it, like `['こころ', '心']`; case, width, spaces and hiragana/katakana don't matter. A right answer turns the card back to the picture, now glowing; a wrong one turns it back with no glow. If the app is closed before they answer, the question comes back when the hunt is resumed. The answer is in the results file (`summary.secret`) and on the finish screen. `SECRET: null` turns it off. The start screen warns while there are fewer keywords than `need`.
 
 ### Your own map drawing
 
@@ -246,6 +253,7 @@ Every event has `ts` (ms), `iso` (UTC time), `type`, and `view` = the map viewpo
 | Geofence | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found` |
 | Treasure signal | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`) |
 | Puzzles | `quiz_answer` (`level`, `attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `quiz_level` (`level`: easy / hard), `item_view` (`show`: puzzle / hint / both) |
+| Reward picture | `reward_shown` (`layers`: item numbers on), `reward_closed` (`shownMs`), `reward_image_error`, `secret_shown`, `secret_answer` (`correct`, `matched`, `text`) |
 | QR codes | `qr_scan_open`, `qr_camera_ready` (`decoder`), `qr_camera_error`, `qr_scan` (`result`: found / already_found / unknown, `method`: camera / manual), `item_found` (`distanceM`, `acc`), `qr_manual_open`, `qr_torch`, `qr_scan_close` (`how`) |
 | GPS | `gps_watch_start`, `gps_first_fix`, `gps_error`, `gps_watch_stop` |
 | Session & app | `app_load`, `session_start`, `session_resume`, `finish_prompt`, `session_finish`, `app_visibility`, `wakelock_on` / `_off`, `network`, `orientation`, `page_hide`, `overlay_error` (drawing file missing), `js_error` |

@@ -77,6 +77,9 @@
   </div>
 
   <nav id="controls" aria-label="Map controls">
+    <button id="btn-reward" class="reward-badge" data-log="reward_badge" aria-label="Your reward picture so far" hidden>
+      <canvas id="reward-thumb"></canvas><b id="reward-count">0/13</b>
+    </button>
     <button id="btn-zoom-in" data-log="zoom_in" aria-label="Zoom in">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
     </button>
@@ -163,6 +166,23 @@
       <p id="scan-status"></p>
       <button id="btn-scan-manual" data-log="scan_manual">Can’t scan it? Type the code</button>
     </footer>
+  </section>
+
+  <section id="reward" aria-label="Reward picture" hidden>
+    <div class="reward-rays" aria-hidden="true"></div>
+    <div class="reward-sparks" aria-hidden="true"></div>
+    <h2 id="reward-title"></h2>
+    <div class="reward-card">
+      <div class="reward-face front"><canvas id="reward-canvas"></canvas></div>
+      <form class="reward-face back" id="secret-form" autocomplete="off">
+        <strong>🔮 The secret 14th treasure</strong>
+        <p id="secret-question"></p>
+        <textarea id="secret-input" rows="3" maxlength="500" placeholder="Your answer"></textarea>
+        <small>One try only.</small>
+        <button type="submit" class="primary">Answer</button>
+      </form>
+    </div>
+    <p id="reward-sub"></p>
   </section>
 
   <div id="modal-root" hidden></div>

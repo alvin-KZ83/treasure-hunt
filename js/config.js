@@ -49,6 +49,27 @@ window.HUNT_CONFIG = {
   QUIZ_TRIES: 3,             // wrong answers allowed per puzzle (shared by both levels)
   QUIZ_REVEAL_RADIUS_M: { easy: 20, hard: 10 },  // radius of that ring, by the level solved
 
+  // ---- Reward picture ------------------------------------------------------
+  // Every found item adds its layer to a picture, shown full-screen right
+  // after the find: Item 1 adds reward/1.png, Item 2 reward/2.png, and so on
+  // ({n} = item number). Layers are stacked in item order and stretched to the
+  // size of the first one, so make them all the same size, transparent where
+  // empty. null = no reward picture.
+  REWARD_LAYERS: 'reward/{n}.png',
+
+  // ---- Secret 14th treasure ----------------------------------------------
+  // Once every item is found, the reward picture flips over to one last
+  // question. The answer is free text and counts if it contains at least
+  // `need` different keywords. A keyword can be a list of ways to write it,
+  // e.g. ['感性', 'かんせい']; case, width, spaces and hiragana/katakana are
+  // ignored. One try: right → the picture flips back glowing, wrong → it
+  // flips back without. null = no secret question.
+  SECRET: {
+    question: 'What is kansei?',
+    keywords: ['alpha', 'bravo', 'charlie'],   // e.g. ['感じる', ['こころ', '心'], 'うつくしさ']
+    need: 3,
+  },
+
   // ---- Alert tuning (metres / seconds) ---------------------------------
   BOUNDARY_TOLERANCE_M: 10,  // how far outside the area before the alarm (absorbs GPS jitter)
   BOUNDARY_REMIND_SEC: 30,   // repeat vibration/sound this often while still outside

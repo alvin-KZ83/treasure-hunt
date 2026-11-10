@@ -1317,11 +1317,189 @@
     updateScanButton();
     alertUser('arrive');
     toast(`✅ ${p.name} found! ${foundCount()}/${ITEMS.length}`, 'ok');
+    showReward(p);
+    updateRewardBadge();
     if (foundCount() === ITEMS.length) {
       log('all_items_found');
       showModal({ id: 'all_found', title: '🎉 All items found!', body: `Head back to ${ORIGIN.name} and tap Finish to save your results.` });
     }
     await saveSession();
+  }
+
+  // ===================================================== REWARD PICTURE
+  // One layer per item (REWARD_LAYERS, {n} = item number), stacked in item
+  // order. After each find the picture is shown full-screen with the layers
+  // of every found item; the new one fades in. Tap to close.
+  const rewardUrl = (p) => C.REWARD_LAYERS.replace('{n}', p.index);
+  const rewardImages = new Map(); // poiId -> Promise<Image | null>
+  const reward = { queue: [], open: null, anim: 0 };
+
+  function rewardImage(p) {
+    if (!rewardImages.has(p.id)) {
+      rewardImages.set(p.id, new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => { log('reward_image_error', { poiId: p.id, url: rewardUrl(p) }); resolve(null); };
+        img.src = rewardUrl(p);
+      }));
+    }
+    return rewardImages.get(p.id);
+  }
+
+  // Load every layer up front, so the picture shows at once (and offline).
+  function preloadReward() {
+    if (C.REWARD_LAYERS) ITEMS.forEach(rewardImage);
+  }
+
+  // p = the item just found (its layer fades in); no p = just look at the picture (the badge).
+  function showReward(p) {
+    if (!C.REWARD_LAYERS) return;
+    reward.queue.push({ p: p || null });
+    if (!reward.open) nextReward();
+  }
+
+  // The badge in the map controls: a thumbnail of the picture so far. Tap = full screen.
+  async function updateRewardBadge() {
+    const btn = $('#btn-reward');
+    btn.hidden = !C.REWARD_LAYERS;
+    if (!C.REWARD_LAYERS) return;
+    $('#reward-count').textContent = `${foundCount()}/${ITEMS.length}`;
+    btn.classList.toggle('glow', !!state.session?.secret?.correct);
+    const imgs = (await Promise.all(ITEMS.map((i) => (isFound(i.id) ? rewardImage(i) : null)))).filter(Boolean);
+    const first = imgs[0] || await rewardImage(ITEMS[0]);
+    if (!first) return;
+    const canvas = $('#reward-thumb');
+    canvas.height = 96; // drawn at 2× for sharp screens
+    canvas.width = Math.round(96 * first.naturalWidth / first.naturalHeight);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const img of imgs) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+
+  function openRewardBadge() {
+    if (!foundCount()) {
+      toast('🖼 Find an item to get the first piece of the picture', 'info', 3500);
+      return;
+    }
+    showReward(null);
+  }
+
+  // After the last find the picture turns over to the secret question
+  // (SECRET): one free-text try. Right → it turns back glowing; wrong → it
+  // turns back without.
+  const secretPending = () => !!C.SECRET && !!state.session && foundCount() === ITEMS.length && !state.session.secret;
+  const secretKeywords = () => (C.SECRET?.keywords || []).map((k) => [].concat(k).map(String)).filter((k) => k.some(normAnswer));
+  const secretNeed = () => C.SECRET?.need || 3;
+  const secretMatches = (text) => {
+    const t = normAnswer(text);
+    return secretKeywords().filter((k) => k.some((w) => normAnswer(w) && t.includes(normAnswer(w)))).map((k) => k[0]);
+  };
+
+  async function nextReward() {
+    const job = reward.queue.shift();
+    reward.open = job || null;
+    if (!job) return;
+    const { p } = job; // null when just looking at the picture
+    const layers = await Promise.all(ITEMS.filter((i) => isFound(i.id)).map(async (i) => ({ p: i, img: await rewardImage(i) })));
+    const drawn = layers.filter((l) => l.img);
+    if (!drawn.length) { nextReward(); return; } // no pictures at all: skip quietly (the errors are logged)
+
+    const canvas = $('#reward-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = drawn[0].img.naturalWidth;
+    canvas.height = drawn[0].img.naturalHeight;
+    const draw = (fresh) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const l of drawn) {
+        ctx.globalAlpha = l.p === p ? fresh : 1;
+        ctx.drawImage(l.img, 0, 0, canvas.width, canvas.height);
+      }
+      ctx.globalAlpha = 1;
+    };
+    draw(0);
+    const final = secretPending() && reward.queue.length === 0;
+    let phase = final ? 'picture' : 'done'; // picture → question → answered → done
+    $('#reward-title').textContent = p ? `✨ ${p.name} found!` : '🖼 Your picture';
+    $('#reward-sub').textContent = `${foundCount()} / ${ITEMS.length} pieces · tap to ${final ? 'turn it over' : p ? 'continue' : 'close'}`;
+    const el = $('#reward');
+    const card = el.querySelector('.reward-card');
+    card.classList.remove('flipped');
+    el.classList.remove('show', 'asking', 'glow', 'secret-lost');
+    el.hidden = false;
+    void el.offsetWidth; // restart the CSS animations
+    el.classList.add('show');
+    const secret = state.session?.secret;
+    if (secret && !final) el.classList.add(secret.correct ? 'glow' : 'secret-lost'); // the finished picture keeps its look
+    log('reward_shown', { poiId: p?.id ?? null, layers: drawn.map((l) => l.p.index), secretNext: final, from: p ? 'found' : 'badge' });
+
+    // The new layer fades in after the picture has popped up.
+    const start = performance.now() + 500;
+    const DURATION = 1400;
+    cancelAnimationFrame(reward.anim);
+    const step = (now) => {
+      const t = Math.min(1, Math.max(0, (now - start) / DURATION));
+      draw(1 - (1 - t) ** 3);
+      if (t < 1) reward.anim = requestAnimationFrame(step);
+    };
+    reward.anim = requestAnimationFrame(step);
+
+    const FLIP_MS = 800;
+    let readyAt = Date.now() + 800; // don't let the tap that confirmed the scan close it
+    const shownAt = Date.now();
+    const input = $('#secret-input');
+
+    const askSecret = () => {
+      phase = 'question';
+      cancelAnimationFrame(reward.anim);
+      draw(1);
+      $('#secret-question').textContent = C.SECRET.question || '';
+      input.value = '';
+      $('#reward-title').textContent = '🔮 One last question…';
+      $('#reward-sub').textContent = '';
+      el.classList.add('asking');
+      card.classList.add('flipped');
+      log('secret_shown');
+      setTimeout(() => input.focus(), FLIP_MS);
+    };
+
+    $('#secret-form').onsubmit = (e) => {
+      e.preventDefault();
+      if (phase !== 'question') return;
+      const text = input.value.trim();
+      if (!normAnswer(text)) { input.focus(); return; }
+      phase = 'answered';
+      input.blur();
+      const matched = secretMatches(text);
+      const correct = matched.length >= secretNeed();
+      state.session.secret = { answer: text.slice(0, 500), correct, matched, at: nowIso() };
+      log('secret_answer', { correct, matched, text: text.slice(0, 500) });
+      saveSession();
+      updateRewardBadge();
+      el.classList.remove('asking');
+      card.classList.remove('flipped');
+      $('#reward-title').textContent = '';
+      setTimeout(() => {
+        phase = 'done';
+        readyAt = Date.now() + 800;
+        el.classList.add(correct ? 'glow' : 'secret-lost');
+        $('#reward-title').textContent = correct ? '🌟 The secret treasure is yours!' : 'The secret stays hidden…';
+        $('#reward-sub').textContent = 'tap to continue';
+        if (correct) alertUser('arrive');
+        else if (C.VIBRATE && navigator.vibrate) navigator.vibrate(60);
+      }, FLIP_MS);
+    };
+
+    el.onclick = () => {
+      if (Date.now() < readyAt) return;
+      if (phase === 'picture') { askSecret(); return; }
+      if (phase !== 'done') return; // the question is up: only its button acts
+      cancelAnimationFrame(reward.anim);
+      draw(1);
+      el.hidden = true;
+      el.classList.remove('show', 'asking', 'glow', 'secret-lost');
+      log('reward_closed', { poiId: p?.id ?? null, shownMs: Date.now() - shownAt });
+      nextReward();
+    };
   }
 
   // ============================================================ RESULTS
@@ -1358,6 +1536,7 @@
       }),
       origin: { id: ORIGIN.id, name: ORIGIN.name, lat: ORIGIN.lat, lng: ORIGIN.lng, radius: ORIGIN.radius },
       region: REGION,
+      secret: C.SECRET ? { question: C.SECRET.question, ...(s.secret || { answer: null, correct: false }) } : null,
       device: {
         userAgent: navigator.userAgent, language: navigator.language,
         screen: `${screen.width}x${screen.height}`, pixelRatio: devicePixelRatio,
@@ -1446,6 +1625,12 @@
     updateHud();
     updateScanButton();
     preloadQuizImages();
+    preloadReward();
+    updateRewardBadge();
+    if (secretPending()) { // the app was closed before the secret question was answered: ask again
+      const last = ITEMS.filter((i) => isFound(i.id)).sort((x, y) => Date.parse(state.session.items[x.id].foundAt) - Date.parse(state.session.items[y.id].foundAt)).pop();
+      showReward(last);
+    }
     startGps();
     requestWakeLock();
     state.timers.forEach(clearInterval);
@@ -1503,6 +1688,7 @@
       ['Items found', `${foundCount()} / ${ITEMS.length}`],
       ['Time', duration(Date.parse(s.finishedAt || nowIso()) - Date.parse(s.startedAt))],
       ['Distance walked', Geo.formatDistance(walkedDistance(gps))],
+      ...(C.SECRET ? [['Secret treasure', s.secret ? (s.secret.correct ? '🌟 Found' : '✗ Missed') : '—']] : []),
     ];
     $('#finish-summary').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
     updateFinishUi();
@@ -2185,6 +2371,7 @@
       else if (codes.has(key)) out.push(`${codes.get(key).name} and ${p.name} have the same QR code.`);
       else codes.set(key, p);
     }
+    if (C.SECRET && secretKeywords().length < secretNeed()) out.push(`SECRET: the answer needs ${secretNeed()} keywords, but only ${secretKeywords().length} are listed, so nobody can get it right. Add them to SECRET.keywords in js/config.js.`);
     return out.concat(quizProblems);
   }
 
@@ -2220,6 +2407,7 @@
     $('#btn-locate').onclick = locateMe;
     $('#btn-area').onclick = () => { setFollow(false, 'fit_area'); markApp('fit_area'); map.fitBounds(regionBounds); };
     $('#btn-list').onclick = openSheet;
+    $('#btn-reward').onclick = openRewardBadge;
     $('#btn-sheet-close').onclick = closeSheet;
     $('#sheet-backdrop').onclick = closeSheet;
     $('#btn-finish').onclick = confirmFinish;
