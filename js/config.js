@@ -40,12 +40,14 @@ window.HUNT_CONFIG = {
   // ---- Puzzles -----------------------------------------------------------
   // questions.json (next to index.html) has one puzzle per item, in item
   // order: the first is Item 1's, and so on. Each is
-  //   { "image": "…", "answer": "…" }  (optional: "question": "text",
-  //   and "answer" can be a list of accepted answers).
+  //   { "image": "…", "answer": "…", "easy": { "image": "…", "answer": "…" } }
+  //   (top level = hard puzzle; optional: "question": "text", and "answer"
+  //   can be a list of accepted answers).
   // Answers match ignoring case, spaces, punctuation and hiragana/katakana.
-  // A right answer shows a ring around that item until it is found.
-  QUIZ_TRIES: 3,             // wrong answers allowed per puzzle
-  QUIZ_REVEAL_RADIUS_M: 20,  // radius of that ring
+  // A right answer shows a ring around that item until it is found: wider
+  // for the easy puzzle, tighter for the hard one.
+  QUIZ_TRIES: 3,             // wrong answers allowed per puzzle (shared by both levels)
+  QUIZ_REVEAL_RADIUS_M: { easy: 20, hard: 10 },  // radius of that ring, by the level solved
 
   // ---- Alert tuning (metres / seconds) ---------------------------------
   BOUNDARY_TOLERANCE_M: 10,  // how far outside the area before the alarm (absorbs GPS jitter)
@@ -70,6 +72,7 @@ window.HUNT_CONFIG = {
   OUTSIDE_SHADE: 0,           // darkening outside REGION: 0 = shown normally, 0.4 = dimmed, 1 = blacked out
   MASK_COLOR: '#1e293b',      // colour of that shading (and behind the map while tiles load)
   BOUNDARY_COLOR: '#f97316',  // dashed outline of REGION
+  QUIZ_RING_COLOR: '#a855f7', // ring (and its number) a solved puzzle shows around its item
 
   // ---- Your own map drawing (optional) ---------------------------------
   // A PNG or JPG laid over the street map, pinned by three of its corners

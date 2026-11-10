@@ -84,7 +84,11 @@
 
   // Puzzles from questions.json, one per item in item order (see loadQuestions).
   const QUIZ_TRIES = C.QUIZ_TRIES || 3;
-  const QUIZ_RADIUS = C.QUIZ_REVEAL_RADIUS_M || 20;
+  // Ring radius by the level solved; a plain number counts for both levels.
+  const quizRadius = (level) => {
+    const r = C.QUIZ_REVEAL_RADIUS_M;
+    return (r && typeof r === 'object' ? r[level] : r) || (level === 'hard' ? 10 : 20);
+  };
   const quizProblems = [];
   // Answers match ignoring case, full/half width, spaces and punctuation, and katakana = hiragana.
   const normAnswer = (s) => String(s ?? '').normalize('NFKC').toLowerCase()
@@ -320,7 +324,7 @@
       const show = isSolved(p.id) && !isFound(p.id);
       if (show && !quizRings[p.id]?._map) {
         (quizRings[p.id] ||= L.layerGroup([
-          L.circle([p.lat, p.lng], { radius: QUIZ_RADIUS, className: 'quiz-ring', weight: 2, dashArray: '4 5', interactive: false }),
+          L.circle([p.lat, p.lng], { radius: quizRadius(quizOf(p.id).solvedLevel), className: 'quiz-ring', weight: 2, dashArray: '4 5', interactive: false }),
           L.marker([p.lat, p.lng], {
             keyboard: false, title: p.name,
             icon: L.divIcon({ className: 'pin-icon', html: `<div class="poi-pin quiz-pin">${p.index}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] }),
@@ -926,36 +930,73 @@
   const quizState = (p) => (isSolved(p.id) ? 'solved' : quizOf(p.id).tries >= QUIZ_TRIES ? 'locked' : 'open');
   const triesLeft = (p) => QUIZ_TRIES - quizOf(p.id).tries;
 
-  // The puzzle picture, answer box and tries left; redrawn after each answer.
+  // Each item's puzzle comes in up to two levels; the team picks one per item
+  // (kept in the session). The tries are shared, so switching gives no extra ones.
+  const QUIZ_LEVELS = [['easy', 'Easy'], ['hard', 'Hard']];
+  const quizLevel = (p) => {
+    const want = quizOf(p.id).level;
+    return p.quiz.levels[want] ? want : QUIZ_LEVELS.map(([l]) => l).find((l) => p.quiz.levels[l]);
+  };
+
+  function setQuizLevel(p, level) {
+    if (quizLevel(p) === level) return;
+    ((state.session.quiz ||= {})[p.id] ||= { tries: 0 }).level = level;
+    log('quiz_level', { poiId: p.id, level });
+    saveSession();
+  }
+
+  // The level switch, puzzle picture, answer box and tries left; redrawn after each answer.
   function quizBox(p, feedback) {
     const box = document.createElement('div');
     box.className = 'quiz';
+    const level = quizLevel(p);
+    const L1 = p.quiz.levels[level];
+    const st = quizState(p);
+    if (st === 'open' && QUIZ_LEVELS.filter(([l]) => p.quiz.levels[l]).length > 1) {
+      const tabs = document.createElement('div');
+      tabs.className = 'view-tabs';
+      for (const [l, label] of QUIZ_LEVELS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = `${label} · ${quizRadius(l)} m`;
+        b.classList.toggle('on', l === level);
+        b.onclick = () => {
+          setQuizLevel(p, l);
+          box.replaceWith(quizBox(p));
+        };
+        tabs.append(b);
+      }
+      box.append(tabs);
+    }
     const img = document.createElement('img');
-    img.className = 'quiz-img';
-    img.alt = `Puzzle for ${p.name}`;
-    img.src = p.quiz.image;
+    img.className = `quiz-img ${level}`;
+    img.alt = `${level === 'easy' ? 'Easy' : 'Hard'} puzzle for ${p.name}`;
+    img.src = L1.image;
     img.onerror = () => {
-      log('quiz_image_error', { poiId: p.id, image: p.quiz.image });
+      log('quiz_image_error', { poiId: p.id, level, image: L1.image });
       const err = document.createElement('p');
       err.className = 'error';
       err.textContent = 'The puzzle picture could not be loaded. Check the internet connection, then close this and open it again.';
       img.replaceWith(err);
     };
     box.append(img);
-    if (p.quiz.question) {
+    if (L1.question) {
       const q = document.createElement('p');
       q.className = 'quiz-question';
-      q.textContent = p.quiz.question;
+      q.textContent = L1.question;
       box.append(q);
     }
     const msg = document.createElement('p');
     msg.className = `quiz-msg${feedback ? ' error' : ''}`;
     box.append(msg);
-    const st = quizState(p);
     if (st !== 'open') {
       msg.textContent = st === 'solved'
-        ? `✓ Solved! ${p.name} is within ${QUIZ_RADIUS} m of the centre of its ring on the map.`
+        ? `✓ Solved! ${p.name} is within ${quizRadius(quizOf(p.id).solvedLevel)} m of the centre of its ring on the map.`
         : `✗ No tries left for this puzzle. Follow the treasure signal instead.`;
+      return box;
+    }
+    if (!L1.answers.length) {
+      msg.textContent = 'This puzzle can’t be answered yet. Try the other level.';
       return box;
     }
     const left = triesLeft(p);
@@ -991,16 +1032,19 @@
     return box;
   }
 
-  // Returns true / false, or null if there was nothing to check (empty, or no tries left).
+  // Checks against the level on screen. Returns true / false, or null if there
+  // was nothing to check (empty, no tries left, or no answer set for that level).
   function answerQuiz(p, text) {
-    if (quizState(p) !== 'open' || !normAnswer(text)) return null;
+    const level = quizLevel(p);
+    const answers = p.quiz.levels[level].answers;
+    if (quizState(p) !== 'open' || !normAnswer(text) || !answers.length) return null;
     const q = ((state.session.quiz ||= {})[p.id] ||= { tries: 0 });
     q.tries++;
-    const correct = p.quiz.answers.some((a) => normAnswer(a) === normAnswer(text));
-    if (correct) q.solvedAt = nowIso();
-    log('quiz_answer', { poiId: p.id, quizId: p.quiz.id, attempt: q.tries, correct, text: String(text).slice(0, 100) });
+    const correct = answers.some((a) => normAnswer(a) === normAnswer(text));
+    if (correct) Object.assign(q, { solvedAt: nowIso(), solvedLevel: level });
+    log('quiz_answer', { poiId: p.id, quizId: p.quiz.id, level, attempt: q.tries, correct, text: String(text).slice(0, 100) });
     if (correct) {
-      log('quiz_solved', { poiId: p.id, quizId: p.quiz.id, tries: q.tries });
+      log('quiz_solved', { poiId: p.id, quizId: p.quiz.id, level, tries: q.tries });
       refreshQuizRings();
       alertUser('ok');
       toast(`🧩 Solved! ${p.name} is somewhere inside the ring`, 'ok');
@@ -1013,7 +1057,9 @@
     return correct;
   }
 
-  // questions.json: one puzzle per item, in item order. Problems end up on the start screen.
+  // questions.json: one puzzle per item, in item order. The top-level "image"
+  // and "answer" are the hard puzzle, "easy": { "image", "answer" } the easy one.
+  // Problems end up on the start screen.
   async function loadQuestions() {
     let list;
     try {
@@ -1025,19 +1071,29 @@
       quizProblems.push(`questions.json could not be read (${e.message}), so there are no puzzles.`);
       return;
     }
+    const level = (q) => (q?.image ? {
+      image: String(q.image), question: q.question ? String(q.question) : '',
+      answers: [].concat(q.answer ?? []).map(String).filter((a) => normAnswer(a)),
+    } : null);
+    const unanswered = [];
     list.forEach((q, i) => {
       const p = ITEMS[i];
       if (!p) return;
-      const answers = [].concat(q?.answer ?? []).map(String).filter((a) => normAnswer(a));
-      if (!q?.image || !answers.length) quizProblems.push(`questions.json, entry ${i + 1} (for ${p.name}): needs an "image" and an "answer".`);
-      else p.quiz = { id: q.id ?? null, image: String(q.image), question: q.question ? String(q.question) : '', answers };
+      const levels = { hard: level(q), easy: level(q?.easy) };
+      for (const [l] of QUIZ_LEVELS) {
+        if (!levels[l]) delete levels[l];
+        else if (!levels[l].answers.length) unanswered.push(`${p.index} (${l})`);
+      }
+      if (!Object.keys(levels).length) quizProblems.push(`questions.json, entry ${i + 1} (for ${p.name}): needs an "image".`);
+      else p.quiz = { id: q.id ?? null, levels };
     });
+    if (unanswered.length) quizProblems.push(`questions.json: no "answer" yet for items ${unanswered.join(', ')}. Those puzzles show but can’t be answered.`);
     if (list.length > ITEMS.length) quizProblems.push(`questions.json has ${list.length} puzzles but there are only ${ITEMS.length} items; the extra ones are ignored.`);
   }
 
   // Fetch every puzzle picture once, so the service worker has them when the signal drops.
   function preloadQuizImages() {
-    for (const p of ITEMS) if (p.quiz) new Image().src = p.quiz.image;
+    for (const p of ITEMS) for (const l of Object.values(p.quiz?.levels || {})) new Image().src = l.image;
   }
 
   function showOnMap(p) {
@@ -1297,7 +1353,7 @@
           id: p.id, index: p.index, name: p.name, lat: p.lat, lng: p.lng, radius: p.radius,
           found: !!r.foundAt, foundAt: r.foundAt || null, method: r.method || null,
           scanLat: r.lat ?? null, scanLng: r.lng ?? null, scanAcc: r.acc ?? null, scanDistanceM: r.distanceM ?? null,
-          quizId: p.quiz?.id ?? null, quizTries: quizOf(p.id).tries, quizSolvedAt: quizOf(p.id).solvedAt || null,
+          quizId: p.quiz?.id ?? null, quizTries: quizOf(p.id).tries, quizSolvedAt: quizOf(p.id).solvedAt || null, quizSolvedLevel: quizOf(p.id).solvedLevel || null,
         };
       }),
       origin: { id: ORIGIN.id, name: ORIGIN.name, lat: ORIGIN.lat, lng: ORIGIN.lng, radius: ORIGIN.radius },
@@ -2222,6 +2278,7 @@
   // ================================================================ BOOT
   async function boot() {
     document.documentElement.style.setProperty('--mask', C.MASK_COLOR);
+    if (C.QUIZ_RING_COLOR) document.documentElement.style.setProperty('--quiz-ring', C.QUIZ_RING_COLOR);
     document.title = C.HUNT_NAME;
     $('#hunt-name').textContent = C.HUNT_NAME;
     $('#start-title').textContent = C.HUNT_NAME;

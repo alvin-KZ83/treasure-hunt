@@ -22,6 +22,7 @@ index.html               the app
 css/style.css
 js/config.js             ← YOUR HUNT SETTINGS
 questions.json           the item puzzles, one per item in item order
+puzzle/                  pictures for the easy puzzles (Easy 01 = Item 1)
 js/app.js                map, GPS, alerts, QR scanning, logging, results file
 js/geo.js                distance / inside-area maths
 js/store.js              on-phone storage (IndexedDB)
@@ -44,7 +45,8 @@ tools/hunt-template.png  ready-made template for the current boundary┘
 | `ORIGIN` | Start/finish spot `{ name, lat, lng, radius }` |
 | `POIS` | Your 14 items: `{ id, name, code, lat, lng, hint }`. `id` is letters/numbers only. `code` is the text inside the item's QR code. `radius` overrides `PROXIMITY_RADIUS_M` for one item (optional). `hint` shows when the item is tapped in the item list, and in the signal meter. |
 | `PROXIMITY_RADIUS_M` | Distance at which an item's ring appears and its treasure signal turns on (default 25 m). Phone GPS is usually off by 5–15 m, so 25–40 m works well. |
-| `QUIZ_TRIES`, `QUIZ_REVEAL_RADIUS_M` | Puzzles (see [Item puzzles](#item-puzzles)): wrong answers allowed per puzzle (default 3), and the radius of the ring a solved puzzle shows (default 20 m). |
+| `QUIZ_TRIES`, `QUIZ_REVEAL_RADIUS_M` | Puzzles (see [Item puzzles](#item-puzzles)): wrong answers allowed per puzzle (default 3), and the radius of the ring a solved puzzle shows, by level: `{ easy: 20, hard: 10 }` (a single number counts for both). |
+| `BOUNDARY_COLOR`, `QUIZ_RING_COLOR` | Colours of the dashed hunt boundary and of a solved puzzle's ring and its number, e.g. `'#f97316'`. |
 | `REVEAL_POIS` | `false` (default) keeps items hidden. `true` shows every item's marker, radius and distance, which is handy for checking your setup. |
 | `OVERLAY` | Your own map drawing, or `null` for none (see [Your own map drawing](#your-own-map-drawing)). Its optional `warp` list (`[across, down, lat, lng]` points) is written by the debug view. |
 | `OUTSIDE_SHADE` | How much to darken the map outside `REGION`: `0` (default) shows it normally, `0.4` dims it, `1` blacks it out. |
@@ -98,18 +100,19 @@ Entering a radius doesn't trigger a pop-up or sound; the ring and meter simply a
 
 ### Item puzzles
 
-`questions.json` holds one puzzle per item, in item order: the first entry is Item 1's, the second Item 2's, and so on. An item with no entry has no puzzle.
+`questions.json` holds one puzzle per item, in item order: the first entry is Item 1's, the second Item 2's, and so on. An item with no entry has no puzzle. Each puzzle has a hard level (the top-level `image` / `answer`) and optionally an easy one (`easy`):
 
 ```json
 [
-  { "id": 1562, "image": "https://…/puzzle.png", "answer": "おはらい" },
+  { "id": 1562, "image": "https://…/puzzle.png", "answer": "おはらい",
+    "easy": { "image": "puzzle/Easy 01/1_question (Slide 3).png", "answer": "6" } },
   { "image": "images/quiz/02.png", "question": "What is it?", "answer": ["ラクダ", "camel"] }
 ]
 ```
 
-`image` is the puzzle picture; `answer` is the answer, or a list of accepted answers. Optional: `question` (text under the picture) and `id` (copied into the log). Answers match ignoring upper/lower case, full/half width, spaces and punctuation, and hiragana and katakana count as the same (`オハライ` = `おはらい`).
+`image` is the puzzle picture; `answer` is the answer, or a list of accepted answers. A level with an empty `answer` shows its picture but can't be answered yet (the start screen lists those). Optional: `question` (text under the picture) and `id` (copied into the log). Answers match ignoring upper/lower case, full/half width, spaces and punctuation, and hiragana and katakana count as the same (`オハライ` = `おはらい`).
 
-During the hunt, tapping an item in the item list shows its hint and puzzle with an answer box. A switch at the top (🧩 Puzzle · 💡 Hint · Both) picks what to show; the phone remembers the choice. Each puzzle allows `QUIZ_TRIES` wrong answers. A right answer shows a purple dashed ring of `QUIZ_REVEAL_RADIUS_M` around the item on the map, which stays until the item is found. After the last wrong try the puzzle locks; the item can still be found with the treasure signal.
+During the hunt, tapping an item in the item list shows its hint and puzzle with an answer box. A switch at the top (🧩 Puzzle · 💡 Hint · Both) picks what to show; the phone remembers the choice. Items with both levels also get an **Easy · Hard** switch above the picture (Easy to begin with), remembered per item. Both levels share the same tries, so switching doesn't give extra ones. Each puzzle allows `QUIZ_TRIES` wrong answers. A right answer shows a dashed ring in `QUIZ_RING_COLOR` around the item on the map: a 20 m radius for an easy puzzle, 10 m for a hard one (`QUIZ_REVEAL_RADIUS_M`; the switch shows each level's size), which stays until the item is found. After the last wrong try the puzzle locks; the item can still be found with the treasure signal.
 
 Pictures on another website only load while the phone is online and that site allows it. For the event, it's safer to save them into `images/quiz/` and point `image` at them; the app then keeps them for offline use.
 
@@ -217,7 +220,7 @@ One JSON file per team:
     team, sessionId, startedAt, finishedAt, durationSec, itemsFound, itemsTotal,
     distanceWalkedM, gpsFixes, interactionEvents, simulated, device,
     items: [ { id, name, lat, lng, found, foundAt, method: "camera" | "manual",
-               scanLat, scanLng, scanAcc, scanDistanceM, quizId, quizTries, quizSolvedAt }, … ],
+               scanLat, scanLng, scanAcc, scanDistanceM, quizId, quizTries, quizSolvedAt, quizSolvedLevel }, … ],
     origin, region
   },
   "events": [ one interaction per line … ],
@@ -242,7 +245,7 @@ Every event has `ts` (ms), `iso` (UTC time), `type`, and `view` = the map viewpo
 | Notifications | `notification_shown` / `notification_dismissed` (`channel`: toast / modal / banner, `id`, `how`: tap / timeout / button / backdrop, `button`) |
 | Geofence | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found` |
 | Treasure signal | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`) |
-| Puzzles | `quiz_answer` (`attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `item_view` (`show`: puzzle / hint / both) |
+| Puzzles | `quiz_answer` (`level`, `attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `quiz_level` (`level`: easy / hard), `item_view` (`show`: puzzle / hint / both) |
 | QR codes | `qr_scan_open`, `qr_camera_ready` (`decoder`), `qr_camera_error`, `qr_scan` (`result`: found / already_found / unknown, `method`: camera / manual), `item_found` (`distanceM`, `acc`), `qr_manual_open`, `qr_torch`, `qr_scan_close` (`how`) |
 | GPS | `gps_watch_start`, `gps_first_fix`, `gps_error`, `gps_watch_stop` |
 | Session & app | `app_load`, `session_start`, `session_resume`, `finish_prompt`, `session_finish`, `app_visibility`, `wakelock_on` / `_off`, `network`, `orientation`, `page_hide`, `overlay_error` (drawing file missing), `js_error` |

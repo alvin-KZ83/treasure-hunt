@@ -1,5 +1,6 @@
 :root {
   --mask: #1e293b;
+  --quiz-ring: #a855f7;   /* QUIZ_RING_COLOR in config.js */
   --ink: #0f172a;
   --muted: #64748b;
   --line: #e2e8f0;
@@ -366,6 +367,9 @@ button.big { padding: 17px; font-size: 18px; margin-top: 18px; }
 .modal .view-tabs button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 .item-view[data-show="puzzle"] .item-hint, .item-view[data-show="hint"] .quiz { display: none; }
 .quiz-img { display: block; width: 100%; max-height: 55dvh; object-fit: contain; border-radius: 12px; background: #f1f5f9; }
+/* the easy puzzles are 3:4 portrait: keep that shape, as big as fits */
+.quiz-img.easy { width: auto; max-width: 100%; height: min(55dvh, calc((100vw - 64px) * 4 / 3)); aspect-ratio: 3 / 4; margin: 0 auto; background: #fff; border: 1px solid var(--line); }
+.quiz .view-tabs { margin-top: 4px; }
 .quiz-question { margin: 10px 0 0; font-weight: 600; }
 .modal-body .quiz-msg { margin: 10px 0 0; }
 .quiz-input {
@@ -373,8 +377,8 @@ button.big { padding: 17px; font-size: 18px; margin-top: 18px; }
   font: inherit; font-size: 18px; text-align: center;
 }
 .quiz-input:focus { outline: none; border-color: var(--accent); }
-.quiz-ring { stroke: #a855f7; fill: #a855f7; fill-opacity: 0.1; }
-.poi-pin.quiz-pin { width: 30px; height: 30px; font-size: 13px; background: rgba(147, 51, 234, 0.85); border-style: dashed; }
+.quiz-ring { stroke: var(--quiz-ring); fill: var(--quiz-ring); fill-opacity: 0.1; }
+.poi-pin.quiz-pin { width: 30px; height: 30px; font-size: 13px; background: var(--quiz-ring); opacity: 0.9; border-style: dashed; }
 
 /* --------------------------------------------------------------- modal */
 #modal-root {
