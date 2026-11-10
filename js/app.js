@@ -1249,46 +1249,60 @@
   }
 
   // Small pop-up from the item list: the hint, the item's puzzle while it
-  // isn't found, plus "Show on map" for spots that are already visible
-  // (start, found items, solved puzzles' rings, or everything with REVEAL_POIS).
+  // isn't found, plus "Show on map" for spots that are already visible.
   function openItemInfo(p) {
     const origin = p === ORIGIN;
     const rec = state.session?.items[p.id];
     const withQuiz = !origin && !!p.quiz && running() && !isFound(p.id);
+
     log("item_info", {
       poiId: p.id,
       hasHint: !!p.hint,
       found: isFound(p.id),
       quiz: withQuiz ? quizState(p) : undefined,
     });
+
     const text = origin
       ? "This is where the hunt starts and ends. Come back here when you are done and tap Finish."
       : `${isFound(p.id) ? `✓ Found at ${clockTime(rec.foundAt)}` : "Not found yet"}\n\n${p.hint ? `💡 ${p.hint}` : withQuiz ? "" : "No hint for this one. Follow the treasure signal!"}`.trim();
+
     let body = text;
+
     if (withQuiz) {
       body = document.createElement("div");
       body.className = "item-view";
+
       const status = document.createElement("p");
       status.textContent = isFound(p.id)
         ? `✓ Found at ${clockTime(rec.foundAt)}`
         : "Not found yet";
+
       body.append(status);
+
+      // Tabs are created here but added AFTER the puzzle.
+      let tabs = null;
+
       if (p.hint) {
-        // the team picks what to see: puzzle, hint or both
         const hint = document.createElement("p");
         hint.className = "item-hint";
         hint.textContent = `💡 ${p.hint}`;
-        const tabs = document.createElement("div");
+
+        tabs = document.createElement("div");
         tabs.className = "view-tabs";
+
         const show = (view, how) => {
           body.dataset.show = view;
-          for (const b of tabs.children)
+
+          for (const b of tabs.children) {
             b.classList.toggle("on", b.dataset.view === view);
+          }
+
           if (how) {
             localStorage.setItem(ITEM_VIEW_KEY, view);
             log("item_view", { poiId: p.id, show: view });
           }
         };
+
         for (const [view, label] of [
           ["puzzle", "🧩 Puzzle"],
           ["hint", "💡 Hint"],
@@ -1301,8 +1315,9 @@
           b.onclick = () => show(view, "tap");
           tabs.append(b);
         }
-        body.prepend(tabs);
+
         body.append(hint);
+
         show(
           ["puzzle", "hint", "both"].includes(
             localStorage.getItem(ITEM_VIEW_KEY),
@@ -1311,8 +1326,16 @@
             : "both",
         );
       }
+
+      // Puzzle content
       body.append(quizBox(p));
+
+      // Tabs BELOW the puzzle and hint
+      if (tabs) {
+        body.append(tabs);
+      }
     }
+
     const buttons =
       origin || isFound(p.id) || isSolved(p.id) || C.REVEAL_POIS
         ? [
@@ -1324,9 +1347,10 @@
             { label: "Close" },
           ]
         : [{ label: withQuiz ? "Close" : "OK", primary: !withQuiz }];
+
     showModal({
       id: `item_info_${p.id}`,
-      title: origin ? `🏁 ${p.name}` : p.name,
+      title: origin ? `🏁 ${ORIGIN.name}` : p.name,
       body,
       buttons,
       compact: !withQuiz,

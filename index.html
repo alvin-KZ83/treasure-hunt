@@ -39,19 +39,16 @@
         <div class="brand">
           <strong id="hunt-name">Treasure Hunt</strong>
           <span id="team-label"></span>
+          <span class="pill gps-off" id="gps-pill">GPS off</span>
         </div>
-        <span class="pill gps-off" id="gps-pill">GPS off</span>
+
         <div class="hud">
           <span class="pill">
             <img src="icons/trophy.svg" alt="Trophy" class="pill-icon" />
             <b id="progress">0/14</b>
           </span>
           <span class="pill">
-            <img
-              src="icons/clock.svg"
-              alt="Clock"
-              class="pill-icon clock-icon"
-            />
+            <img src="icons/clock.svg" alt="Clock" class="invert-icon" />
             <span id="timer">0:00</span>
           </span>
 
@@ -175,11 +172,14 @@
     </div>
 
     <div id="bottombar">
-      <button id="btn-list" class="list-btn" data-log="item_list">
-        ☰ Items <b id="list-count">0/14</b>
+      <button id="btn-list" class="list-btn icon-btn" data-log="item_list">
+        <img src="icons/list.svg" alt="" class="pill-icon" />
+        Items <b id="list-count">0/14</b>
       </button>
-      <button id="btn-scan" class="scan-btn" data-log="scan_button">
-        📷 <span>Scan QR code</span>
+
+      <button id="btn-scan" class="scan-btn icon-btn" data-log="scan_button">
+        <img src="icons/camera.svg" alt="" class="invert-icon" />
+        <span>Scan QR code</span>
       </button>
     </div>
 

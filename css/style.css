@@ -44,6 +44,7 @@ button {
   cursor: pointer;
   border: 0;
   background: none;
+  border-radius: 0.5rem !important;
 }
 [hidden] {
   display: none !important;
@@ -240,16 +241,20 @@ body.has-signal .me-dot {
   grid-template-columns: 1fr auto;
   gap: 6px 10px;
   align-items: center;
-  padding: calc(var(--st) + 8px) 10px 8px;
+  padding: 1rem;
   background: var(--bar);
   color: #fff;
   backdrop-filter: blur(8px);
 }
 .brand {
   display: flex;
-  flex-direction: column;
   min-width: 0;
   line-height: 1.2;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
 }
 .brand strong,
 #team-label {
@@ -258,10 +263,10 @@ body.has-signal .me-dot {
   text-overflow: ellipsis;
 }
 .brand strong {
-  font-size: 16px;
+  font-size: 1.25rem;
 }
 #team-label {
-  font-size: 12px;
+  font-size: 1rem;
   opacity: 0.75;
 }
 .hud {
@@ -286,12 +291,13 @@ body.has-signal .me-dot {
   white-space: nowrap;
 }
 
-.pill-icon {
-  width: 20px;
-  height: 20px;
+.pill-icon,
+.invert-icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
-.clock-icon {
+.invert-icon {
   filter: brightness(0) saturate(100%) invert(1);
 }
 
@@ -317,7 +323,6 @@ body.has-signal .me-dot {
   background: var(--danger);
   color: #fff;
   padding: 9px 16px;
-  border-radius: 2rem;
   font-weight: 700;
 }
 body:not(.running) #btn-finish,
@@ -690,7 +695,15 @@ body:not(.running) #bottombar {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
+.icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
 .list-btn {
   flex: none;
   padding: 14px 16px;
@@ -712,6 +725,7 @@ body:not(.running) #bottombar {
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  max-width: 15rem;
 }
 /* at an item that hasn't been scanned yet */
 .scan-btn.ready {
@@ -1054,6 +1068,114 @@ button.big {
   color: var(--danger);
 }
 
+/* --------------------------------------------------------------- modal */
+#modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(var(--st) + 16px) 12px calc(var(--sb) + 16px);
+  background: rgba(2, 6, 23, 0.55);
+}
+.modal {
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 22px;
+  padding: 22px 20px 14px;
+  animation: rise 0.25s ease-out;
+}
+.modal h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
+}
+.modal-body {
+  white-space: pre-line;
+  color: #334155;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+.modal-body p {
+  margin: 0 0 10px;
+}
+.modal .actions {
+  margin-top: 8px;
+}
+/* small centred pop-up (item hints) */
+#modal-root:has(.modal.compact) {
+  align-items: center;
+}
+.modal.compact {
+  width: min(340px, 100%);
+  padding: 18px 18px 12px;
+}
+.modal.compact h2 {
+  font-size: 18px;
+}
+.modal.compact .modal-body {
+  font-size: 15px;
+}
+.modal.compact button {
+  padding: 11px;
+  font-size: 15px;
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------ ITEM MODAL: FIXED SIZE
+   Only affects the puzzle/hint modal, not other pop-ups.
+   Change 85dvh to 90dvh if you want it taller.
+----------------------------------------------------------------------- */
+.modal:has(.item-view) {
+  height: 85dvh;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Only the middle content scrolls; title and Close stay visible. */
+.modal:has(.item-view) .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.item-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* Tabs are after the quiz in app.js. Keep them at the bottom when short,
+   and visible near the bottom while scrolling longer content. */
+.item-view .view-tabs {
+  margin-top: auto;
+  margin-bottom: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+
+/* The Close button is outside the scroll area. */
+.modal:has(.item-view) .actions {
+  flex: 0 0 auto;
+}
+
+/* Push the answer form toward the bottom */
+.item-view .quiz {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.item-view .quiz-form {
+  margin-top: auto;
+}
+
+/* --------------------------------------- ITEM MODAL: PUZZLE & HINT */
 /* item puzzle (item pop-up) and the ring a solved one shows on the map */
 .view-tabs {
   display: flex;
@@ -1122,61 +1244,8 @@ button.big {
   background: rgba(147, 51, 234, 0.85);
   border-style: dashed;
 }
-
-/* --------------------------------------------------------------- modal */
-#modal-root {
-  position: fixed;
-  inset: 0;
-  z-index: 1600;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: calc(var(--st) + 16px) 12px calc(var(--sb) + 16px);
-  background: rgba(2, 6, 23, 0.55);
-}
-.modal {
-  width: min(460px, 100%);
-  max-height: 100%;
-  overflow-y: auto;
-  background: #fff;
-  border-radius: 22px;
-  padding: 22px 20px 14px;
-  animation: rise 0.25s ease-out;
-}
-.modal h2 {
-  margin: 0 0 8px;
-  font-size: 21px;
-}
-.modal-body {
-  white-space: pre-line;
-  color: #334155;
-  font-size: 15.5px;
-  line-height: 1.45;
-}
-.modal-body p {
-  margin: 0 0 10px;
-}
-.modal .actions {
-  margin-top: 8px;
-}
-/* small centred pop-up (item hints) */
-#modal-root:has(.modal.compact) {
-  align-items: center;
-}
-.modal.compact {
-  width: min(340px, 100%);
-  padding: 18px 18px 12px;
-}
-.modal.compact h2 {
-  font-size: 18px;
-}
-.modal.compact .modal-body {
-  font-size: 15px;
-}
-.modal.compact button {
-  padding: 11px;
-  font-size: 15px;
-  margin-top: 8px;
+.quiz-form button.primary {
+  margin-bottom: 1rem;
 }
 
 /* ---------------------------------------------------------- animation */
