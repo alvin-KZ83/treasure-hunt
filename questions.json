@@ -2,51 +2,90 @@
   {
     "id": 1562,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2024/02/asopunazo.240227.png",
-    "answer": "おはらい",
+    "answer": [
+      "おはらい",
+      "お祓い",
+      "御祓い",
+      "お払い"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 01/1_question (Slide 3).png",
-      "answer": "8"
+      "answer": [
+        "8",
+        "八",
+        "はち"
+      ]
     }
   },
   {
     "id": 1836,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2024/06/asopunazo.240625.png",
-    "answer": "ラクダ",
+    "answer": [
+      "ラクダ",
+      "駱駝"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 02/1_question (Slide 35).png",
-      "answer": "あお"
+      "answer": [
+        "あお",
+        "青"
+      ]
     }
   },
   {
     "id": 1954,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2024/08/asopunazo.240827.png",
-    "answer": "ヒル",
+    "answer": [
+      "ヒル",
+      "昼",
+      "蛭"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 03/1_question (Slide 15).png",
-      "answer": "ありがとう"
+      "answer": [
+        "ありがとう",
+        "有難う",
+        "有り難う"
+      ]
     }
   },
   {
     "id": 2013,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2024/09/asopunazo.241001.png",
-    "answer": "かいめい",
+    "answer": [
+      "かいめい",
+      "解明",
+      "改名"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 04/1_question (Slide 17).png",
-      "answer": "ひつじ"
+      "answer": [
+        "ひつじ",
+        "羊"
+      ]
     }
   },
   {
     "id": 2038,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2024/10/asopunazo.241017.png",
-    "answer": "ほうがく",
+    "answer": [
+      "ほうがく",
+      "方角",
+      "邦楽",
+      "法学"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 05/1_question (Slide 19).png",
-      "answer": "ひぶた"
+      "answer": [
+        "ひぶた",
+        "火蓋",
+        "火ぶた"
+      ]
     }
   },
   {
@@ -56,43 +95,70 @@
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 06/1_question (Slide 23).png",
-      "answer": "ひみつきち"
+      "answer": [
+        "ひみつきち",
+        "秘密基地"
+      ]
     }
   },
   {
     "id": 2679,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2025/12/asopunazo.260115.png",
-    "answer": "ハイイロ",
+    "answer": [
+      "ハイイロ",
+      "灰色"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 07/1_question (Slide 41).png",
-      "answer": "しろ"
+      "answer": [
+        "しろ",
+        "白",
+        "白色",
+        "しろいろ"
+      ]
     }
   },
   {
     "id": 2743,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2026/04/asopunazo.260409.png",
-    "answer": "かぞく",
+    "answer": [
+      "かぞく",
+      "家族"
+    ],
     "level": 1,
     "easy": {
       "image": "puzzle/Easy 08/1_question (Slide 9).png",
-      "answer": "しょうぼうし"
+      "answer": [
+        "しょうぼうし",
+        "消防士"
+      ]
     }
   },
   {
     "id": 2485,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2025/06/asopunazo.0610.png",
-    "answer": "きおく",
+    "answer": [
+      "きおく",
+      "記憶"
+    ],
     "level": 2,
     "easy": {
       "image": "puzzle/Easy 09/1_question (Slide 11).png",
-      "answer": "みさき"
+      "answer": [
+        "みさき",
+        "岬"
+      ]
     }
   },
   {
     "id": 2504,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2025/06/asopunazo.250619.png",
-    "answer": "まきもの",
+    "answer": [
+      "まきもの",
+      "巻物",
+      "巻き物"
+    ],
     "level": 2,
     "easy": {
       "image": "puzzle/Easy 10/1_question (Slide 13).png",
@@ -102,31 +168,50 @@
   {
     "id": 2586,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2025/08/asopunazo.250821.png",
-    "answer": "OFFICE",
+    "answer": [
+      "OFFICE",
+      "オフィス"
+    ],
     "level": 2,
     "easy": {
       "image": "puzzle/Easy 11/1_question (Slide 25).png",
-      "answer": "地図"
+      "answer": [
+        "地図",
+        "ちず"
+      ]
     }
   },
   {
     "id": 2797,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2026/11/asopunazo261105.png",
-    "answer": "おくさま",
+    "answer": [
+      "おくさま",
+      "奥様",
+      "奥さま"
+    ],
     "level": 2,
     "easy": {
       "image": "puzzle/Easy 12/1_question (Slide 27).png",
-      "answer": "パパイヤ"
+      "answer": [
+        "パパイヤ",
+        "パパイア"
+      ]
     }
   },
   {
     "id": 2789,
     "image": "https://nazotoki-concierge.com/nazotoki-mondaishu/wp-content/uploads/2026/10/asopunazo260911.png",
-    "answer": "CUT",
+    "answer": [
+      "CUT",
+      "カット"
+    ],
     "level": 3,
     "easy": {
       "image": "puzzle/Easy 13/1_question (Slide 29).png",
-      "answer": "あおぞら"
+      "answer": [
+        "あおぞら",
+        "青空"
+      ]
     }
   }
 ]
