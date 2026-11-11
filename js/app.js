@@ -13,8 +13,8 @@
   if (!C || !window.L) {
     fatal(
       !C
-        ? "js/config.js could not be read — it probably has a typo (a missing comma or bracket). Open Chrome DevTools → Console to see the line."
-        : "Could not load the map library. Check your internet connection and reload.",
+        ? "js/config.js を読み込めませんでした（カンマやカッコの抜けなど、書き間違いの可能性があります）。Chrome DevTools → Console で該当行を確認してください。"
+        : "地図を読み込めませんでした。インターネット接続を確認して、ページを再読み込みしてください。",
     );
     return;
   }
@@ -167,6 +167,15 @@
   const running = () => state.session?.phase === "running";
   const isFound = (id) => !!state.session?.items[id]?.foundAt;
   const foundCount = () => ITEMS.filter((p) => isFound(p.id)).length;
+  // When the last item was found: the hunt clock stops there. (Worked out from
+  // the finds for sessions saved before completedAt existed.)
+  const completedAt = (s) =>
+    s?.completedAt ||
+    (s && ITEMS.every((p) => s.items[p.id]?.foundAt)
+      ? ITEMS.map((p) => s.items[p.id].foundAt).sort().pop()
+      : null);
+  // The hunt time: start → last find, or start → now while still hunting.
+  const huntEnd = (s) => completedAt(s) || s.finishedAt || nowIso();
   const quizOf = (id) => state.session?.quiz?.[id] || { tries: 0 }; // { tries, solvedAt }
   const isSolved = (id) => !!quizOf(id).solvedAt;
   const saveSession = () => Store.put("meta", state.session, "session");
@@ -422,12 +431,12 @@
   function popupHtml(p) {
     const status =
       p === ORIGIN
-        ? "Start &amp; finish point"
+        ? "スタート / ゴール地点"
         : isFound(p.id)
           ? "✓ Found"
-          : "Not found yet";
+          : "まだ見つけていません";
     const dist = state.pos
-      ? ` · ${Geo.formatDistance(Geo.distance(state.pos, p))} away`
+      ? ` · あと ${Geo.formatDistance(Geo.distance(state.pos, p))}`
       : "";
     return `<strong>${esc(p.name)}</strong><br><small>${status}${dist}</small>${p.hint ? `<br>${esc(p.hint).replace(/\n/g, "<br>")}` : ""}`;
   }
@@ -624,7 +633,7 @@
   }
 
   function locateMe() {
-    if (!state.pos) return toast("Waiting for a GPS fix…", "info");
+    if (!state.pos) return toast("GPSの位置を取得中です…", "info");
     setFollow(true, "locate_button");
     markApp("locate_button");
     map.setView([state.pos.lat, state.pos.lng], Math.max(map.getZoom(), 17));
@@ -705,8 +714,8 @@
       setGpsPill("off");
       showModal({
         id: "no_gps",
-        title: "No GPS",
-        body: "This browser does not support location. Please open the hunt in Google Chrome.",
+        title: "GPSが使えません",
+        body: "このブラウザは位置情報に対応していません。Google Chrome で開いてください。",
       });
       return;
     }
@@ -772,11 +781,11 @@
       setGpsPill("off");
       showModal({
         id: "gps_denied",
-        title: "📍 Location is blocked",
-        body: "The hunt needs your location.\n\nIn Chrome tap the icon left of the address bar → Permissions → Location → Allow. Then reload — your progress is saved.",
+        title: "📍 位置情報がブロックされています",
+        body: "宝探しには位置情報が必要です。\n\nChrome のアドレスバー左のアイコン → 権限 → 位置情報 → 許可 にしてから、再読み込みしてください。進み具合は保存されています。",
         buttons: [
-          { label: "Reload", primary: true, action: () => location.reload() },
-          { label: "Close" },
+          { label: "再読み込み", primary: true, action: () => location.reload() },
+          { label: "閉じる" },
         ],
       });
     } else {
@@ -867,14 +876,14 @@
         how: "returned_inside",
       });
       alertUser("ok");
-      toast("✅ Back inside the hunt area", "ok");
+      toast("✅ エリア内に戻りました", "ok");
     }
 
     if (state.outside && edge) {
       const b = Geo.bearing(fix, edge);
       $("#boundary-arrow").style.transform = `rotate(${Math.round(b)}deg)`;
       $("#boundary-text").textContent =
-        `Head ${Geo.compass(b)} for about ${Geo.formatDistance(edge.distance)} to get back.`;
+        `${Geo.compass(b)}へ約 ${Geo.formatDistance(edge.distance)} 進むと戻れます。`;
       $("#boundary-banner").hidden = false;
       if (Date.now() - state.lastOutsideAlert > C.BOUNDARY_REMIND_SEC * 1000) {
         state.lastOutsideAlert = Date.now();
@@ -898,11 +907,11 @@
       alertUser("arrive");
       showModal({
         id: "origin_return",
-        title: `🏁 Back at ${ORIGIN.name}`,
-        body: `You've found ${foundCount()} of ${ITEMS.length} items.\nFinish now to save your results, or keep hunting.`,
+        title: `🏁 ${ORIGIN.name}に戻りました`,
+        body: `${ITEMS.length}個中 ${foundCount()}個のお宝を見つけました。\nここで終了して結果を保存するか、探し続けるか選んでください。`,
         buttons: [
-          { label: "Finish & save results", primary: true, action: finishHunt },
-          { label: "Keep hunting" },
+          { label: "終了して結果を保存", primary: true, action: finishHunt },
+          { label: "探し続ける" },
         ],
       });
     }
@@ -917,10 +926,10 @@
   // UI can use it three ways: the CSS variable --proximity (0–1) on <html>,
   // the class body.has-signal, and the 'hunt:proximity' event on document.
   const SIGNAL_LEVELS = [
-    { min: 0, label: "Faint" },
-    { min: 0.25, label: "Warm" },
-    { min: 0.5, label: "Hot" },
-    { min: 0.7, label: "Very hot — look around!" },
+    { min: 0, label: "かすか" },
+    { min: 0.25, label: "あたたかい" },
+    { min: 0.5, label: "あつい" },
+    { min: 0.7, label: "すぐ近く！周りを探そう！" },
   ];
   const levelOf = (v) =>
     SIGNAL_LEVELS.reduce((lvl, l, i) => (v >= l.min ? i : lvl), 0);
@@ -1196,7 +1205,7 @@
     const el = $("#gps-pill");
     el.className = `pill gps-${kind}`;
     el.textContent =
-      { off: "GPS off", search: "GPS…", sim: "SIM GPS" }[kind] ||
+      { off: "GPS オフ", search: "GPS…", sim: "SIM GPS" }[kind] ||
       `GPS ±${Math.round(acc)} m`;
   }
 
@@ -1231,25 +1240,25 @@
       const li = document.createElement("li");
       li.className = origin ? "origin" : done ? "done" : "";
       let sub = origin
-        ? "Start & finish point"
+        ? "スタート / ゴール地点"
         : done
-          ? `Found ${clockTime(rec.foundAt)}${rec.method === "manual" ? " · code typed in" : ""}`
-          : "Not found yet";
+          ? `${clockTime(rec.foundAt)} に発見${rec.method === "manual" ? " · コード入力" : ""}`
+          : "まだ見つけていません";
       if (!origin && !done && p.quiz && state.session) {
         const st = quizState(p);
         sub +=
           st === "solved"
-            ? " · 🧩 solved"
+            ? " · 🧩 正解"
             : st === "locked"
-              ? " · 🧩 no tries left"
-              : ` · 🧩 ${triesLeft(p)}/${QUIZ_TRIES} tries`;
+              ? " · 🧩 回答できません"
+              : ` · 🧩 残り ${triesLeft(p)}/${QUIZ_TRIES} 回`;
       }
       if (state.pos && C.REVEAL_POIS && !done) {
         sub += ` · ${Geo.formatDistance(Geo.distance(state.pos, p))} ${Geo.compass(Geo.bearing(state.pos, p))}`;
       }
       li.innerHTML = `<span class="num">${origin ? "🏁" : done ? "✓" : p.index}</span>
         <span class="info"><strong>${esc(p.name)}</strong><small>${esc(sub)}</small></span>
-        ${p.hint ? '<span class="hint-tag" aria-label="Has a hint">💡</span>' : ""}<span class="chev" aria-hidden="true">›</span>`;
+        ${p.hint ? '<span class="hint-tag" aria-label="ヒントあり">💡</span>' : ""}<span class="chev" aria-hidden="true">›</span>`;
       li.onclick = () => openItemInfo(p);
       ol.append(li);
     }
@@ -1270,8 +1279,8 @@
     });
 
     const text = origin
-      ? "This is where the hunt starts and ends. Come back here when you are done and tap Finish."
-      : `${isFound(p.id) ? `✓ Found at ${clockTime(rec.foundAt)}` : "Not found yet"}\n\n${p.hint ? `💡 ${p.hint}` : withQuiz ? "" : "No hint for this one. Follow the treasure signal!"}`.trim();
+      ? "宝探しのスタートとゴールの場所です。終わったらここに戻って「終了」をタップしてください。"
+      : `${isFound(p.id) ? `✓ ${clockTime(rec.foundAt)} に発見` : "まだ見つけていません"}\n\n${p.hint ? `💡 ${p.hint}` : withQuiz ? "" : "このお宝にはヒントがありません。お宝シグナルをたよりに探そう！"}`.trim();
 
     let body = text;
 
@@ -1281,8 +1290,8 @@
 
       const status = document.createElement("p");
       status.textContent = isFound(p.id)
-        ? `✓ Found at ${clockTime(rec.foundAt)}`
-        : "Not found yet";
+        ? `✓ ${clockTime(rec.foundAt)} に発見`
+        : "まだ見つけていません";
 
       body.append(status);
 
@@ -1311,9 +1320,9 @@
         };
 
         for (const [view, label] of [
-          ["puzzle", "🧩 Puzzle"],
-          ["hint", "💡 Hint"],
-          ["both", "Both"],
+          ["puzzle", "🧩 謎"],
+          ["hint", "💡 ヒント"],
+          ["both", "両方"],
         ]) {
           const b = document.createElement("button");
           b.type = "button";
@@ -1347,13 +1356,13 @@
       origin || isFound(p.id) || isSolved(p.id) || C.REVEAL_POIS
         ? [
             {
-              label: "📍 Show on map",
+              label: "📍 地図で見る",
               primary: true,
               action: () => showOnMap(p),
             },
-            { label: "Close" },
+            { label: "閉じる" },
           ]
-        : [{ label: withQuiz ? "Close" : "OK", primary: !withQuiz }];
+        : [{ label: withQuiz ? "閉じる" : "OK", primary: !withQuiz }];
 
     showModal({
       id: `item_info_${p.id}`,
@@ -1388,8 +1397,8 @@
   // Each item's puzzle comes in up to two levels; the team picks one per item
   // (kept in the session). The tries are shared, so switching gives no extra ones.
   const QUIZ_LEVELS = [
-    ["easy", "Easy"],
-    ["hard", "Hard"],
+    ["easy", "かんたん"],
+    ["hard", "むずかしい"],
   ];
   const quizLevel = (p) => {
     const want = quizOf(p.id).level;
@@ -1421,7 +1430,7 @@
       for (const [l, label] of QUIZ_LEVELS) {
         const b = document.createElement("button");
         b.type = "button";
-        b.textContent = `${label} · ${quizRadius(l)} m`;
+        b.textContent = `${label}（${quizRadius(l)} m）`;
         b.classList.toggle("on", l === level);
         b.onclick = () => {
           setQuizLevel(p, l);
@@ -1433,14 +1442,14 @@
     }
     const img = document.createElement("img");
     img.className = `quiz-img ${level}`;
-    img.alt = `${level === "easy" ? "Easy" : "Hard"} puzzle for ${p.name}`;
+    img.alt = `${p.name}の謎（${level === "easy" ? "かんたん" : "むずかしい"}）`;
     img.src = L1.image;
     img.onerror = () => {
       log("quiz_image_error", { poiId: p.id, level, image: L1.image });
       const err = document.createElement("p");
       err.className = "error";
       err.textContent =
-        "The puzzle picture could not be loaded. Check the internet connection, then close this and open it again.";
+        "謎の画像を読み込めませんでした。インターネット接続を確認して、いったん閉じてから開き直してください。";
       img.replaceWith(err);
     };
     box.append(img);
@@ -1456,22 +1465,22 @@
     if (st !== "open") {
       msg.textContent =
         st === "solved"
-          ? `✓ Solved! ${p.name} is within ${quizRadius(quizOf(p.id).solvedLevel)} m of the centre of its ring on the map.`
-          : `✗ No tries left for this puzzle. Follow the treasure signal instead.`;
+          ? `✓ 正解！${p.name}は地図の円の中心から ${quizRadius(quizOf(p.id).solvedLevel)} m 以内にあります。`
+          : `✗ この謎はもう回答できません。お宝シグナルをたよりに探そう！`;
       return box;
     }
     if (!L1.answers.length) {
       msg.textContent =
-        "This puzzle can’t be answered yet. Try the other level.";
+        "この謎はまだ回答できません。もう一方の難易度を試してください。";
       return box;
     }
     const left = triesLeft(p);
-    msg.textContent = `${feedback ? `${feedback} ` : ""}${left} ${left === 1 ? "try" : "tries"} left.`;
+    msg.textContent = `${feedback ? `${feedback} ` : ""}残り ${left} 回`;
     const form = document.createElement("form");
     form.className = "quiz-form";
     const input = document.createElement("input");
     input.className = "quiz-input";
-    input.placeholder = "Your answer";
+    input.placeholder = "答えを入力";
     input.autocomplete = "off";
     input.spellcheck = false;
     input.setAttribute("autocapitalize", "off");
@@ -1479,7 +1488,7 @@
     const btn = document.createElement("button");
     btn.type = "submit";
     btn.className = "primary";
-    btn.textContent = "Answer";
+    btn.textContent = "回答する";
     form.append(input, btn);
     form.onsubmit = (e) => {
       e.preventDefault();
@@ -1493,7 +1502,7 @@
         showOnMap(p);
         return;
       }
-      const next = quizBox(p, "✗ Not quite.");
+      const next = quizBox(p, "✗ ちがいます。");
       box.replaceWith(next);
       next.querySelector("input")?.focus();
     };
@@ -1504,25 +1513,32 @@
   // Checks against the level on screen. Returns true / false, or null if there
   // was nothing to check (empty, no tries left, or no answer set for that level).
   function answerQuiz(p, text) {
-    if (quizState(p) !== "open" || !normAnswer(text)) return null;
+    const level = quizLevel(p);
+    const answers = p.quiz.levels[level].answers;
+    if (quizState(p) !== "open" || !normAnswer(text) || !answers.length)
+      return null;
     const q = ((state.session.quiz ||= {})[p.id] ||= { tries: 0 });
     q.tries++;
-    const correct = p.quiz.answers.some(
-      (a) => normAnswer(a) === normAnswer(text),
-    );
-    if (correct) q.solvedAt = nowIso();
+    const correct = answers.some((a) => normAnswer(a) === normAnswer(text));
+    if (correct) Object.assign(q, { solvedAt: nowIso(), solvedLevel: level });
     log("quiz_answer", {
       poiId: p.id,
       quizId: p.quiz.id,
+      level,
       attempt: q.tries,
       correct,
       text: String(text).slice(0, 100),
     });
     if (correct) {
-      log("quiz_solved", { poiId: p.id, quizId: p.quiz.id, tries: q.tries });
+      log("quiz_solved", {
+        poiId: p.id,
+        quizId: p.quiz.id,
+        level,
+        tries: q.tries,
+      });
       refreshQuizRings();
       alertUser("ok");
-      toast(`🧩 Solved! ${p.name} is somewhere inside the ring`, "ok");
+      toast(`🧩 正解！${p.name}は円の中のどこかにあります`, "ok");
     } else {
       if (C.VIBRATE && navigator.vibrate) navigator.vibrate(60);
       if (q.tries >= QUIZ_TRIES)
@@ -1624,7 +1640,7 @@
     const btn = $("#btn-scan");
     btn.classList.toggle("ready", !!p);
     btn.querySelector("span").textContent =
-      p && C.REVEAL_POIS ? `Scan QR · ${p.name}` : "Scan QR code";
+      p && C.REVEAL_POIS ? `QRを読み取る · ${p.name}` : "QRコードを読み取る";
   }
 
   function setScanStatus(text, kind = "") {
@@ -1683,11 +1699,11 @@
     log("qr_scan_open", { from, poiId: target?.id ?? null });
     $("#scan-title").textContent =
       target && C.REVEAL_POIS
-        ? `Scan the QR code · ${target.name}`
-        : "Scan the QR code";
+        ? `QRコードを読み取る · ${target.name}`
+        : "QRコードを読み取る";
     $("#btn-torch").hidden = true;
     $("#btn-torch").classList.remove("on");
-    setScanStatus("Starting camera…");
+    setScanStatus("カメラを起動しています…");
     $("#scanner").hidden = false;
     try {
       if (!navigator.mediaDevices?.getUserMedia)
@@ -1714,7 +1730,7 @@
       if (token !== scan.token) return;
       const track = stream.getVideoTracks()[0];
       $("#btn-torch").hidden = !track.getCapabilities?.().torch;
-      setScanStatus("Point the camera at the QR code");
+      setScanStatus("カメラをQRコードに向けてください");
       log("qr_camera_ready", {
         decoder: decoder.kind,
         width: video.videoWidth,
@@ -1726,8 +1742,8 @@
       if (token !== scan.token) return;
       setScanStatus(
         e.name === "NotAllowedError"
-          ? "The camera is blocked. In Chrome tap the icon left of the address bar → Permissions → Camera → Allow. Or type the code in instead."
-          : `Camera problem (${e.message}). You can type the code in instead.`,
+          ? "カメラがブロックされています。Chrome のアドレスバー左のアイコン → 権限 → カメラ → 許可 にしてください。コードを入力することもできます。"
+          : `カメラに問題があります（${e.message}）。コードを入力することもできます。`,
         "warn",
       );
     }
@@ -1765,7 +1781,7 @@
       alertUser("soft");
     }
     setScanStatus(
-      "That QR code isn’t part of this hunt. Look for the hunt’s code.",
+      "この宝探しのQRコードではありません。お宝のQRコードを探してください。",
       "warn",
     );
   }
@@ -1804,7 +1820,7 @@
     const wrap = document.createElement("div");
     const p = document.createElement("p");
     p.className = error ? "error" : "";
-    p.textContent = error || "Type the code printed under the QR code.";
+    p.textContent = error || "QRコードの下に書かれたコードを入力してください。";
     const input = document.createElement("input");
     input.className = "code-input";
     input.autocomplete = "off";
@@ -1814,15 +1830,15 @@
     wrap.append(p, input);
     showModal({
       id: "manual_code",
-      title: "Type the code",
+      title: "コードを入力",
       body: wrap,
       buttons: [
         {
-          label: "Check code",
+          label: "確認する",
           primary: true,
           action: () => checkTypedCode(input.value),
         },
-        { label: "Cancel" },
+        { label: "キャンセル" },
       ],
       onOpen: (box) => {
         input.addEventListener("keydown", (e) => {
@@ -1838,7 +1854,7 @@
     if (!text) return;
     if (submitCode(text, "manual") === "unknown")
       openManualEntry(
-        `“${text}” is not one of this hunt’s codes. Check it and try again.`,
+        `「${text}」はこの宝探しのコードではありません。確認してもう一度入力してください。`,
       );
   }
 
@@ -1855,7 +1871,7 @@
     if (isFound(p.id)) {
       log("qr_scan", { result: "already_found", method, poiId: p.id });
       alertUser("ok");
-      toast(`✓ ${p.name} was already found`, "ok");
+      toast(`✓ ${p.name}はもう見つけています`, "ok");
       return "already_found";
     }
     log("qr_scan", { result: "found", method, poiId: p.id });
@@ -1886,15 +1902,27 @@
     updateHud();
     updateScanButton();
     alertUser("arrive");
-    toast(`✅ ${p.name} found! ${foundCount()}/${ITEMS.length}`, "ok");
+    toast(`✅ ${p.name}を見つけた！ ${foundCount()}/${ITEMS.length}`, "ok");
     showReward(p);
     updateRewardBadge();
     if (foundCount() === ITEMS.length) {
-      log("all_items_found");
+      state.session.completedAt = rec.foundAt; // the clock stops here
+      tick();
+      const ms = Date.parse(rec.foundAt) - Date.parse(state.session.startedAt);
+      const time = duration(ms);
+      log("all_items_found", { huntTimeSec: Math.round(ms / 1000) });
+      // Queued behind the reward picture (and the secret question), so it shows once those are done.
       showModal({
         id: "all_found",
-        title: "🎉 All items found!",
-        body: `Head back to ${ORIGIN.name} and tap Finish to save your results.`,
+        title: "🎉 すべてのお宝を見つけました！",
+        body: `タイム：${time}（タイマーは止まりました）
+
+宝探しを終了して、結果を保存しますか？`,
+        dismissable: false,
+        buttons: [
+          { label: "終了して結果を保存", primary: true, action: finishHunt },
+          { label: "まだ続ける" },
+        ],
       });
     }
     await saveSession();
@@ -1965,7 +1993,7 @@
   function openRewardBadge() {
     if (!foundCount()) {
       toast(
-        "🖼 Find an item to get the first piece of the picture",
+        "🖼 お宝を見つけると、絵の最初のピースがもらえます",
         "info",
         3500,
       );
@@ -1986,7 +2014,7 @@
     (C.SECRET?.keywords || [])
       .map((k) => [].concat(k).map(String))
       .filter((k) => k.some(normAnswer));
-  const secretNeed = () => C.SECRET?.need || 3;
+  const secretNeed = () => C.SECRET?.need ?? 3;
   const secretMatches = (text) => {
     const t = normAnswer(text);
     return secretKeywords()
@@ -2027,10 +2055,10 @@
     const final = secretPending() && reward.queue.length === 0;
     let phase = final ? "picture" : "done"; // picture → question → answered → done
     $("#reward-title").textContent = p
-      ? `✨ ${p.name} found!`
-      : "🖼 Your picture";
+      ? `✨ ${p.name}を見つけた！`
+      : "あなたの絵";
     $("#reward-sub").textContent =
-      `${foundCount()} / ${ITEMS.length} pieces · tap to ${final ? "turn it over" : p ? "continue" : "close"}`;
+      `${foundCount()} / ${ITEMS.length} ピース · タップして${final ? "裏返す" : p ? "続ける" : "閉じる"}`;
     const el = $("#reward");
     const card = el.querySelector(".reward-card");
     card.classList.remove("flipped");
@@ -2070,7 +2098,7 @@
       draw(1);
       $("#secret-question").textContent = C.SECRET.question || "";
       input.value = "";
-      $("#reward-title").textContent = "🔮 One last question…";
+      $("#reward-title").textContent = "🔮 最後の問題…";
       $("#reward-sub").textContent = "";
       el.classList.add("asking");
       card.classList.add("flipped");
@@ -2107,9 +2135,9 @@
         readyAt = Date.now() + 800;
         el.classList.add(correct ? "glow" : "secret-lost");
         $("#reward-title").textContent = correct
-          ? "🌟 The secret treasure is yours!"
-          : "The secret stays hidden…";
-        $("#reward-sub").textContent = "tap to continue";
+          ? "🌟 秘密のお宝を手に入れた！"
+          : "秘密のお宝は隠されたまま…";
+        $("#reward-sub").textContent = "タップして続ける";
         if (correct) alertUser("arrive");
         else if (C.VIBRATE && navigator.vibrate) navigator.vibrate(60);
       }, FLIP_MS);
@@ -2170,7 +2198,11 @@
       exportedAt: nowIso(),
       durationSec: Math.round(
         (Date.parse(end) - Date.parse(s.startedAt)) / 1000,
-      ),
+      ), // the whole session, start → Finish
+      completedAt: completedAt(s), // when the last item was found (null if not all were)
+      huntTimeSec: Math.round(
+        (Date.parse(huntEnd(s)) - Date.parse(s.startedAt)) / 1000,
+      ), // the hunt clock: start → last find (or → Finish if not all found)
       itemsFound: foundCount(),
       itemsTotal: ITEMS.length,
       distanceWalkedM: walkedDistance(gps),
@@ -2263,7 +2295,7 @@
     } catch (e) {
       console.error(e);
       $("#finish-msg").textContent =
-        `Could not create the results file: ${e.message}. Tap the button to try again.`;
+        `結果ファイルを作成できませんでした（${e.message}）。もう一度ボタンをタップしてください。`;
     } finally {
       btn.disabled = false;
     }
@@ -2274,8 +2306,8 @@
     const slug =
       team
         .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[^a-z0-9]+/g, "-")
+        .normalize("NFKC") // keeps Japanese team names readable in the file name
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 24) || "team";
     return `${fileStamp(new Date())}_${slug}_${Math.random().toString(36).slice(2, 6)}`;
@@ -2318,13 +2350,13 @@
     flushPreStart();
     log("session_resume", { found: foundCount() });
     beginTracking();
-    toast("Hunt resumed — progress restored", "ok");
+    toast("宝探しを再開しました。進み具合は復元されています", "ok");
   }
 
   function beginTracking() {
     $("#start-screen").hidden = true;
     document.body.classList.add("running");
-    $("#team-label").textContent = `Team ${state.session.team}`;
+    $("#team-label").textContent = `チーム ${state.session.team}`;
     refreshPins();
     updateHud();
     updateScanButton();
@@ -2347,16 +2379,16 @@
     state.timers.forEach(clearInterval);
     state.timers = [setInterval(tick, 1000)];
     tick();
-    if (SIM) toast("Simulation mode — tap the map to move", "info", 7000);
+    if (SIM) toast("シミュレーションモード：地図をタップすると移動します", "info", 7000);
   }
 
   function tick() {
     const s = state.session;
     if (!s) return;
     $("#timer").textContent = duration(
-      (s.finishedAt ? Date.parse(s.finishedAt) : Date.now()) -
-        Date.parse(s.startedAt),
+      Date.parse(huntEnd(s)) - Date.parse(s.startedAt),
     );
+    $("#timer").classList.toggle("stopped", !!completedAt(s));
     if (
       !SIM &&
       state.watchId !== null &&
@@ -2370,11 +2402,11 @@
     log("finish_prompt");
     showModal({
       id: "confirm_finish",
-      title: "Finish the hunt?",
-      body: `You found ${foundCount()} of ${ITEMS.length} items.\nTracking stops and your results are saved to this phone as one file.`,
+      title: "宝探しを終了しますか？",
+      body: `${ITEMS.length}個中 ${foundCount()}個のお宝を見つけました。\n位置の記録を止めて、結果をこのスマホに1つのファイルとして保存します。`,
       buttons: [
-        { label: "Finish & save results", primary: true, action: finishHunt },
-        { label: "Keep hunting" },
+        { label: "終了して結果を保存", primary: true, action: finishHunt },
+        { label: "探し続ける" },
       ],
     });
   }
@@ -2407,20 +2439,18 @@
     const s = state.session;
     const gps = await Store.getAll("gps");
     const rows = [
-      ["Team", s.team],
-      ["Items found", `${foundCount()} / ${ITEMS.length}`],
+      ["チーム", s.team],
+      ["見つけたお宝", `${foundCount()} / ${ITEMS.length}`],
       [
-        "Time",
-        duration(
-          Date.parse(s.finishedAt || nowIso()) - Date.parse(s.startedAt),
-        ),
+        "タイム",
+        duration(Date.parse(huntEnd(s)) - Date.parse(s.startedAt)),
       ],
-      ["Distance walked", Geo.formatDistance(walkedDistance(gps))],
+      ["歩いた距離", Geo.formatDistance(walkedDistance(gps))],
       ...(C.SECRET
         ? [
             [
-              "Secret treasure",
-              s.secret ? (s.secret.correct ? "🌟 Found" : "✗ Missed") : "—",
+              "秘密のお宝",
+              s.secret ? (s.secret.correct ? "🌟 発見" : "✗ 見逃し") : "—",
             ],
           ]
         : []),
@@ -2435,28 +2465,28 @@
   function updateFinishUi() {
     const saved = !!state.session.downloadedAt;
     $("#btn-download").textContent = saved
-      ? "⬇ Download again"
-      : "⬇ Download results file";
+      ? "⬇ もう一度ダウンロード"
+      : "⬇ 結果ファイルをダウンロード";
     $("#finish-msg").textContent = saved
-      ? `Your results were saved as\n${resultsFileName()}\nin this phone’s Downloads (Chrome ⋮ → Downloads). Send that file to the organiser.\nNot there? Tap Download again.`
-      : "Tap the button to save your results file on this phone.";
+      ? `結果は\n${resultsFileName()}\nとして、このスマホの「ダウンロード」に保存されました（Chrome ⋮ → ダウンロード）。このファイルを運営者に送ってください。\n見つからない場合は、もう一度ダウンロードしてください。`
+      : "ボタンをタップして、結果ファイルをこのスマホに保存してください。";
   }
 
   function discardAndReload(message) {
     showModal({
       id: "confirm_discard",
-      title: "Delete this hunt’s data?",
+      title: "この宝探しのデータを削除しますか？",
       body: message,
       buttons: [
         {
-          label: "Delete and start over",
+          label: "削除してやり直す",
           danger: true,
           action: async () => {
             await Store.clearAll();
             location.reload();
           },
         },
-        { label: "Cancel" },
+        { label: "キャンセル" },
       ],
     });
   }
@@ -3636,7 +3666,7 @@
     if (saved) {
       const found = ITEMS.filter((p) => saved.items[p.id]?.foundAt).length;
       $("#resume-text").textContent =
-        `Team “${saved.team}” has a hunt in progress (${found}/${ITEMS.length} found, started ${clockTime(saved.startedAt)}).`;
+        `チーム「${saved.team}」の宝探しが途中です（${found}/${ITEMS.length} 個発見、${clockTime(saved.startedAt)} 開始）。`;
       $("#btn-resume").onclick = () => resumeHunt(saved);
     }
     $("#start-screen").hidden = false;
@@ -3660,7 +3690,7 @@
     if ($("#btn-discard"))
       $("#btn-discard").onclick = () =>
         discardAndReload(
-          "The hunt in progress on this phone will be deleted, including its logs and GPS track.",
+          "このスマホにある途中の宝探しが、記録やGPSの軌跡も含めて削除されます。",
         );
 
     if ($("#btn-zoom-in"))
@@ -3748,8 +3778,8 @@
       $("#btn-new").onclick = () =>
         discardAndReload(
           state.session?.downloadedAt
-            ? "This removes the hunt from this phone. Make sure the results file has reached the organiser first."
-            : "The results file has not been downloaded yet. If you continue, this hunt’s logs are gone for good.",
+            ? "この宝探しをスマホから削除します。先に結果ファイルが運営者に届いていることを確認してください。"
+            : "結果ファイルがまだダウンロードされていません。続けると、この宝探しの記録は完全に失われます。",
         );
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -3824,7 +3854,7 @@
   boot().catch((error) => {
     console.error("[Treasure Hunt] Startup failed:", error);
     fatal(
-      `Treasure Hunt could not start: ${error?.message || error}. Check Chrome DevTools → Console.`,
+      `宝探しを開始できませんでした：${error?.message || error}。Chrome DevTools → Console を確認してください。`,
     );
   });
 })();

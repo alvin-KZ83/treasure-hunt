@@ -235,7 +235,7 @@ One JSON file per team:
 {
   "format": "treasure-hunt-results", "formatVersion": 1,
   "summary": {
-    team, sessionId, startedAt, finishedAt, durationSec, itemsFound, itemsTotal,
+    team, sessionId, startedAt, finishedAt, durationSec, completedAt, huntTimeSec, itemsFound, itemsTotal,
     distanceWalkedM, gpsFixes, interactionEvents, simulated, device,
     items: [ { id, name, lat, lng, found, foundAt, method: "camera" | "manual",
                scanLat, scanLng, scanAcc, scanDistanceM, quizId, quizTries, quizSolvedAt, quizSolvedLevel }, … ],
@@ -247,6 +247,8 @@ One JSON file per team:
               proximityItem, proximity (the signal value at that moment) … ]
 }
 ```
+
+**Times:** the hunt clock stops the moment the last item is found. `completedAt` is that moment (null if not every item was found) and `huntTimeSec` is the team's time: start → last find, or start → Finish if they didn't find them all. This is the time shown on screen and on the finish screen. `durationSec` is the whole session, start → Finish. When the last item is found, a pop-up offers to end the hunt and save the results straight away.
 
 `scanDistanceM` is how far GPS placed the team from the item when they scanned it. A large value means the code was scanned somewhere else, for example from a photo another team shared.
 
@@ -261,7 +263,7 @@ Every event has `ts` (ms), `iso` (UTC time), `type`, and `view` = the map viewpo
 | Map                                     | `view_change` (`source`: `user`, `follow`, `button_in`, `fit_area`, `list_select`…), `zoom` (`from`, `to`, `trigger`: `pinch` / `double_tap` / `wheel` / `button_in` / `button_out` / `follow` / …), `pan_start`, `pan_end` (`distancePx`), `map_tap`, `map_long_press`, `poi_tap`, `popup_close`, `follow_on` / `follow_off` (`reason`), `map_resize`             |
 | Buttons & screens                       | `ui_tap` (`control`), `list_open`, `list_close`, `item_info` (hint pop-up opened: `poiId`, `hasHint`, `found`), `list_select` ("Show on map" in that pop-up)                                                                                                                                                                                                       |
 | Notifications                           | `notification_shown` / `notification_dismissed` (`channel`: toast / modal / banner, `id`, `how`: tap / timeout / button / backdrop, `button`)                                                                                                                                                                                                                      |
-| Geofence                                | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found`                                                                                                                                                                                                                                                         |
+| Geofence                                | `boundary_exit`, `boundary_reminder`, `boundary_return`, `origin_left`, `origin_return`, `all_items_found` (`huntTimeSec`)                                                                                                                                                                                                                                                       |
 | Treasure signal                         | `proximity_enter` (`poiId`, `distance`, `value`, `level`), `proximity_level` (`level` 0–3, `label`, `value`), `proximity_exit` (`found`), `treasure_shown` / `treasure_hidden` (ring + pin appeared / went: `poiId`, `distance`)                                                                                                                                   |
 | Puzzles                                 | `quiz_answer` (`level`, `attempt`, `correct`, `text`), `quiz_solved` (`tries`), `quiz_locked`, `quiz_image_error`, `quiz_level` (`level`: easy / hard), `item_view` (`show`: puzzle / hint / both)                                                                                                                                                                 |
 | Reward picture                          | `reward_shown` (`layers`: item numbers on), `reward_closed` (`shownMs`), `reward_image_error`, `secret_shown`, `secret_answer` (`correct`, `matched`, `text`)                                                                                                                                                                                                      |

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -8,7 +8,7 @@
     />
     <meta name="theme-color" content="#0b1220" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <title>Treasure Hunt</title>
+    <title>宝探し</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon-192.png" />
     <link
@@ -31,32 +31,33 @@
     <script defer src="js/app.js"></script>
   </head>
   <body>
-    <div id="map" aria-label="Hunt map"></div>
+    <div id="map" aria-label="宝探しの地図"></div>
     <div id="signal-glow" aria-hidden="true"></div>
 
     <div id="top">
       <header id="topbar">
         <div class="brand">
-          <strong id="hunt-name">Treasure Hunt</strong>
+          <strong id="hunt-name">宝探し</strong>
           <span id="team-label"></span>
-          <span class="pill gps-off" id="gps-pill">GPS off</span>
+          <span class="pill gps-off" id="gps-pill">GPS オフ</span>
         </div>
 
         <div class="hud">
           <span class="pill">
-            <img src="icons/trophy.svg" alt="Trophy" class="pill-icon" />
-            <b id="progress">0/14</b>
+            <img src="icons/trophy.svg" alt="見つけたお宝" class="pill-icon" />
+            <b id="progress">0/13</b>
           </span>
           <span class="pill">
-            <img src="icons/clock.svg" alt="Clock" class="invert-icon" />
+            <img src="icons/clock.svg" alt="タイム" class="invert-icon" />
             <span id="timer">0:00</span>
           </span>
 
           <button id="btn-finish" class="finish" data-log="finish">
-            Finish
+            終了
           </button>
         </div>
       </header>
+      <!-- Debug / scouting view: organiser tool (DEBUG_TOOLS), kept in English -->
       <section id="debug-panel" aria-label="Debug view" hidden>
         <div class="debug-head">
           <strong>🛠 Debug</strong>
@@ -115,7 +116,7 @@
             </svg>
           </div>
           <div>
-            <strong>You're outside the hunt area!</strong>
+            <strong>エリアの外に出ています！</strong>
             <span id="boundary-text"></span>
           </div>
         </div>
@@ -123,18 +124,27 @@
       </div>
     </div>
 
-    <nav id="controls" aria-label="Map controls">
-      <button id="btn-zoom-in" data-log="zoom_in" aria-label="Zoom in">
+    <nav id="controls" aria-label="地図の操作">
+      <button
+        id="btn-reward"
+        class="reward-badge"
+        data-log="reward_badge"
+        aria-label="集めた絵を見る"
+        hidden
+      >
+        <canvas id="reward-thumb"></canvas><b id="reward-count">0/13</b>
+      </button>
+      <button id="btn-zoom-in" data-log="zoom_in" aria-label="拡大">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
       </button>
-      <button id="btn-zoom-out" data-log="zoom_out" aria-label="Zoom out">
+      <button id="btn-zoom-out" data-log="zoom_out" aria-label="縮小">
         <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
       </button>
       <button
         id="btn-locate"
         class="active"
         data-log="locate"
-        aria-label="Follow my location"
+        aria-label="現在地を追う"
       >
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="3.5" />
@@ -145,7 +155,7 @@
       <button
         id="btn-area"
         data-log="fit_area"
-        aria-label="Show whole hunt area"
+        aria-label="エリア全体を表示"
       >
         <svg viewBox="0 0 24 24">
           <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
@@ -164,7 +174,7 @@
     <div id="signal" role="status" hidden>
       <div class="signal-head">
         <span class="signal-icon" aria-hidden="true">📡</span>
-        <span>Treasure signal · <b id="signal-name"></b></span>
+        <span>お宝シグナル · <b id="signal-name"></b></span>
         <strong id="signal-level"></strong>
       </div>
       <div class="signal-track"><div class="signal-fill"></div></div>
@@ -174,23 +184,23 @@
     <div id="bottombar">
       <button id="btn-list" class="list-btn icon-btn" data-log="item_list">
         <img src="icons/list.svg" alt="" class="pill-icon" />
-        Items <b id="list-count">0/14</b>
+        お宝リスト <b id="list-count">0/13</b>
       </button>
 
       <button id="btn-scan" class="scan-btn icon-btn" data-log="scan_button">
         <img src="icons/camera.svg" alt="" class="invert-icon" />
-        <span>Scan QR code</span>
+        <span>QRコードを読み取る</span>
       </button>
     </div>
 
     <div id="sheet-backdrop" hidden></div>
-    <section id="sheet" aria-label="Items">
+    <section id="sheet" aria-label="お宝リスト">
       <header>
-        <h2>Items</h2>
+        <h2>お宝リスト</h2>
         <button
           id="btn-sheet-close"
           data-log="item_list_close"
-          aria-label="Close"
+          aria-label="閉じる"
         >
           ✕
         </button>
@@ -201,39 +211,38 @@
     <section id="start-screen" class="overlay" hidden>
       <div class="card">
         <div class="logo">🧭</div>
-        <h1 id="start-title">Treasure Hunt</h1>
+        <h1 id="start-title">宝探し</h1>
         <div id="start-new">
           <p>
-            Find all <b id="item-total">14</b> items in the area, scan the QR
-            code at each one, then come back to the start.
+            エリア内にある <b id="item-total">13</b> 個のお宝をすべて見つけて、それぞれのQRコードを読み取ろう。終わったらスタート地点に戻ってきてね。
           </p>
-          <label for="team-input">Team name</label>
+          <label for="team-input">チーム名</label>
           <input
             id="team-input"
             type="text"
             maxlength="40"
             autocomplete="off"
-            placeholder="e.g. Blue Foxes"
+            placeholder="例：青きつね"
           />
           <button id="btn-start" class="primary big" data-log="start">
-            Start hunt
+            宝探しをはじめる
           </button>
         </div>
         <div id="start-resume" hidden>
           <p id="resume-text"></p>
           <button id="btn-resume" class="primary big" data-log="resume">
-            Resume hunt
+            宝探しを再開する
           </button>
           <button id="btn-discard" class="link" data-log="discard">
-            Discard it and start over
+            削除して最初からやり直す
           </button>
         </div>
         <ul class="tips">
-          <li>Allow <b>location</b> and <b>camera</b> when Chrome asks.</li>
+          <li>Chrome にたずねられたら、<b>位置情報</b>と<b>カメラ</b>を許可してください。</li>
           <li>
-            Keep this page open; it keeps the screen awake while tracking.
+            このページは開いたままにしてください。記録中は画面が消えないようになっています。
           </li>
-          <li>Stay inside the orange dashed boundary.</li>
+          <li>オレンジ色の点線の内側から出ないでください。</li>
         </ul>
         <div id="start-warnings" class="warnings"></div>
         <button id="btn-debug-start" class="link" data-log="debug_start" hidden>
@@ -244,7 +253,7 @@
 
     <section id="finish-screen" class="overlay" hidden>
       <div class="card">
-        <h1>🎉 Hunt complete!</h1>
+        <h1>🎉 宝探し終了！</h1>
         <dl id="finish-summary" class="summary"></dl>
         <p id="finish-msg"></p>
         <button
@@ -252,30 +261,30 @@
           class="primary big"
           data-log="download_results"
         >
-          ⬇ Download results file
+          ⬇ 結果ファイルをダウンロード
         </button>
         <button id="btn-new" class="link" data-log="new_hunt">
-          Start a new hunt
+          新しい宝探しをはじめる
         </button>
       </div>
     </section>
 
-    <section id="scanner" aria-label="QR code scanner" hidden>
+    <section id="scanner" aria-label="QRコードリーダー" hidden>
       <video id="scan-video" playsinline muted></video>
       <div class="scan-frame"></div>
       <header class="scan-top">
         <button
           id="btn-scan-close"
           data-log="scan_close"
-          aria-label="Close scanner"
+          aria-label="閉じる"
         >
           ✕
         </button>
-        <strong id="scan-title">Scan the QR code</strong>
+        <strong id="scan-title">QRコードを読み取る</strong>
         <button
           id="btn-torch"
           data-log="scan_torch"
-          aria-label="Flashlight"
+          aria-label="ライト"
           hidden
         >
           🔦
@@ -284,32 +293,32 @@
       <footer class="scan-bottom">
         <p id="scan-status"></p>
         <button id="btn-scan-manual" data-log="scan_manual">
-          Can’t scan it? Type the code
+          読み取れない？コードを入力する
         </button>
       </footer>
     </section>
 
-    <div id="modal-root" hidden></div>
-    <noscript><p class="fatal">This app needs JavaScript enabled.</p></noscript>
-  </body>
-  <section id="reward" aria-label="Reward picture" hidden>
-    <div class="reward-rays" aria-hidden="true"></div>
-    <div class="reward-sparks" aria-hidden="true"></div>
-    <h2 id="reward-title"></h2>
-    <div class="reward-card">
-      <div class="reward-face front"><canvas id="reward-canvas"></canvas></div>
-      <form class="reward-face back" id="secret-form" autocomplete="off">
-        <strong>🔮 The secret 14th treasure</strong>
-        <p id="secret-question"></p>
-        <textarea id="secret-input" rows="3" maxlength="500" placeholder="Your answer"></textarea>
-        <small>One try only.</small>
-        <button type="submit" class="primary">Answer</button>
-      </form>
-    </div>
-    <p id="reward-sub"></p>
-  </section>
+    <section id="reward" aria-label="ごほうびの絵" hidden>
+      <h2 id="reward-title"></h2>
+      <div class="reward-card">
+        <div class="reward-face front"><canvas id="reward-canvas"></canvas></div>
+        <form class="reward-face back" id="secret-form" autocomplete="off">
+          <strong>🔮 秘密の14個目のお宝</strong>
+          <p id="secret-question"></p>
+          <textarea
+            id="secret-input"
+            rows="3"
+            maxlength="500"
+            placeholder="答えを入力"
+          ></textarea>
+          <small>回答できるのは1回だけです。</small>
+          <button type="submit" class="primary">回答する</button>
+        </form>
+      </div>
+      <p id="reward-sub"></p>
+    </section>
 
-  <div id="modal-root" hidden></div>
-  <noscript><p class="fatal">This app needs JavaScript enabled.</p></noscript>
-</body>
+    <div id="modal-root" hidden></div>
+    <noscript><p class="fatal">このアプリを使うには JavaScript を有効にしてください。</p></noscript>
+  </body>
 </html>

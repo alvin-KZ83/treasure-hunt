@@ -291,6 +291,11 @@ body.has-signal .me-dot {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* the hunt clock once every item is found: stopped, shown in green */
+#timer.stopped {
+  color: #4ade80;
+  font-weight: 700;
+}
 
 .pill-icon,
 .invert-icon {
@@ -1151,8 +1156,10 @@ button.big {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 .item-view[data-show="puzzle"] .item-hint,
-.item-view[data-show="hint"] .quiz {
-  display: none;
+.item-view[data-show="hint"] .quiz-img,
+.item-view[data-show="hint"] .quiz-question,
+.item-view[data-show="hint"] .quiz > p.error:not(.quiz-msg) {
+  display: none; /* Hint view hides only the picture: the answer box stays */
 }
 .quiz-img {
   display: block;
@@ -1223,8 +1230,8 @@ button.big {
   justify-content: center;
   gap: 14px;
   padding: calc(var(--st) + 20px) 16px calc(var(--sb) + 20px);
-  background: radial-gradient(circle at 50% 45%, #1e1b4b 0%, #020617 75%);
-  color: #fff;
+  background: #fff; /* plain white behind the picture */
+  color: var(--ink);
   text-align: center;
   cursor: pointer;
   -webkit-user-select: none;
@@ -1236,42 +1243,10 @@ button.big {
 #reward.show {
   animation: fade-in 0.35s ease-out;
 }
-.reward-rays {
-  position: absolute;
-  left: 50%;
-  top: 45%;
-  width: 220vmax;
-  height: 220vmax;
-  margin: -110vmax 0 0 -110vmax;
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(250, 204, 21, 0.13) 0deg 9deg,
-    transparent 9deg 24deg
-  );
-  -webkit-mask-image: radial-gradient(circle, #000 0%, transparent 45%);
-  mask-image: radial-gradient(circle, #000 0%, transparent 45%);
-  animation: spin 40s linear infinite;
-}
-.reward-sparks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(2px 2px at 12% 18%, #fde68a, transparent),
-    radial-gradient(2px 2px at 82% 12%, #fff, transparent),
-    radial-gradient(3px 3px at 70% 78%, #fde68a, transparent),
-    radial-gradient(2px 2px at 22% 82%, #fff, transparent),
-    radial-gradient(2px 2px at 92% 52%, #fde68a, transparent),
-    radial-gradient(3px 3px at 6% 55%, #fff, transparent),
-    radial-gradient(2px 2px at 48% 8%, #fff, transparent),
-    radial-gradient(2px 2px at 40% 92%, #fde68a, transparent);
-  animation: twinkle 2.2s ease-in-out infinite;
-}
 #reward h2 {
   position: relative;
   margin: 0;
   font-size: 26px;
-  text-shadow: 0 2px 12px rgba(250, 204, 21, 0.6);
 }
 #reward.show h2 {
   animation: drop 0.5s 0.1s ease-out backwards;
@@ -1281,18 +1256,16 @@ button.big {
   display: block;
   max-width: 100%;
   max-height: 68dvh;
-  filter: drop-shadow(0 0 18px rgba(250, 204, 21, 0.55));
+  filter: drop-shadow(0 2px 10px rgba(15, 23, 42, 0.18));
 }
 #reward.show #reward-canvas {
-  animation:
-    reward-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) backwards,
-    reward-glow 2.4s 0.6s ease-in-out infinite;
+  animation: reward-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
 }
 #reward-sub {
   position: relative;
   margin: 0;
   font-size: 15px;
-  opacity: 0.8;
+  color: var(--muted);
 }
 #reward.show #reward-sub {
   animation: fade-in 0.5s 1.2s backwards;
@@ -1379,34 +1352,22 @@ button.big {
 #reward.glow #reward-canvas {
   animation: reward-shine 1.8s ease-in-out infinite;
 }
-#reward.glow .reward-rays {
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(250, 204, 21, 0.3) 0deg 9deg,
-    transparent 9deg 24deg
-  );
-  animation-duration: 12s;
-}
 #reward.glow h2 {
-  color: #fde68a;
+  color: #b45309;
   animation: reward-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 #reward.secret-lost #reward-canvas {
   filter: none;
   animation: none;
 }
-#reward.secret-lost .reward-rays,
-#reward.secret-lost .reward-sparks {
-  display: none;
-}
 @keyframes reward-shine {
   0%,
   100% {
-    filter: drop-shadow(0 0 22px rgba(250, 204, 21, 0.8)) brightness(1.05);
+    filter: drop-shadow(0 0 16px rgba(245, 158, 11, 0.85)) brightness(1.03);
   }
   50% {
-    filter: drop-shadow(0 0 48px rgba(253, 230, 138, 1))
-      drop-shadow(0 0 90px rgba(250, 204, 21, 0.6)) brightness(1.18);
+    filter: drop-shadow(0 0 36px rgba(245, 158, 11, 1))
+      drop-shadow(0 0 70px rgba(251, 191, 36, 0.7)) brightness(1.12);
   }
 }
 @keyframes spin {
@@ -1568,8 +1529,10 @@ button.big {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 .item-view[data-show="puzzle"] .item-hint,
-.item-view[data-show="hint"] .quiz {
-  display: none;
+.item-view[data-show="hint"] .quiz-img,
+.item-view[data-show="hint"] .quiz-question,
+.item-view[data-show="hint"] .quiz > p.error:not(.quiz-msg) {
+  display: none; /* Hint view hides only the picture: the answer box stays */
 }
 .quiz-img {
   display: block;

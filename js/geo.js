@@ -33,14 +33,14 @@
 
   function compass(bearingDeg) {
     return [
-      "north",
-      "north-east",
-      "east",
-      "south-east",
-      "south",
-      "south-west",
-      "west",
-      "north-west",
+      "北",
+      "北東",
+      "東",
+      "南東",
+      "南",
+      "南西",
+      "西",
+      "北西",
     ][Math.round(bearingDeg / 45) % 8];
   }
 

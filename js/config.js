@@ -6,7 +6,7 @@
  *  "lat, lng" (click it to copy).
  * ===================================================================== */
 window.HUNT_CONFIG = {
-  HUNT_NAME: "Treasure Hunt",
+  HUNT_NAME: "宝探し",
 
   // ---- Hunt area -------------------------------------------------------
   // Any polygon shape, with as many corners as you like. Either:
@@ -65,9 +65,9 @@ window.HUNT_CONFIG = {
   // ignored. One try: right → the picture flips back glowing, wrong → it
   // flips back without. null = no secret question.
   SECRET: {
-    question: "What is kansei?",
-    keywords: ["alpha", "bravo", "charlie"], // e.g. ['感じる', ['こころ', '心'], 'うつくしさ']
-    need: 3,
+    question: "感性とは?",
+    keywords: ["感性"], // e.g. ['感じる', ['こころ', '心'], 'うつくしさ']
+    need: 0,
   },
 
   // ---- Alert tuning (metres / seconds) ---------------------------------
@@ -199,7 +199,7 @@ window.HUNT_CONFIG = {
   ],
 
   ORIGIN: {
-    name: "Start / Finish",
+    name: "スタート / ゴール",
     lat: 36.1000424,
     lng: 140.1027283,
     radius: 20,
@@ -208,7 +208,7 @@ window.HUNT_CONFIG = {
   POIS: [
     {
       id: "item01",
-      name: "Item 1",
+      name: "お宝 1",
       code: "K7Q2XM",
       lat: 36.0994962,
       lng: 140.1034099,
@@ -216,7 +216,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item02",
-      name: "Item 2",
+      name: "お宝 2",
       code: "P4HN8D",
       lat: 36.1004189,
       lng: 140.1030271,
@@ -224,7 +224,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item03",
-      name: "Item 3",
+      name: "お宝 3",
       code: "T9WB3F",
       lat: 36.1008223,
       lng: 140.1037774,
@@ -232,7 +232,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item04",
-      name: "Item 4",
+      name: "お宝 4",
       code: "R2JC6L",
       lat: 36.1011869,
       lng: 140.1033844,
@@ -240,7 +240,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item05",
-      name: "Item 5",
+      name: "お宝 5",
       code: "M8VE4Z",
       lat: 36.1018389,
       lng: 140.1032408,
@@ -248,7 +248,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item06",
-      name: "Item 6",
+      name: "お宝 6",
       code: "H3XT7N",
       lat: 36.1029291,
       lng: 140.1032982,
@@ -256,7 +256,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item07",
-      name: "Item 7",
+      name: "お宝 7",
       code: "W6LP2K",
       lat: 36.1060497,
       lng: 140.1025432,
@@ -264,7 +264,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item08",
-      name: "Item 8",
+      name: "お宝 8",
       code: "D5RZ9Q",
       lat: 36.1061537,
       lng: 140.1022804,
@@ -272,7 +272,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item09",
-      name: "Item 9",
+      name: "お宝 9",
       code: "B7NF3H",
       lat: 36.1072653,
       lng: 140.1027632,
@@ -280,7 +280,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item10",
-      name: "Item 10",
+      name: "お宝 10",
       code: "Y4KM8T",
       lat: 36.1078829,
       lng: 140.1024467,
@@ -288,7 +288,7 @@ window.HUNT_CONFIG = {
     },
     {
       id: "item11",
-      name: "Item 11",
+      name: "お宝 11",
       code: "F2GW6R",
       lat: 36.1083185,
       lng: 140.1016635,
@@ -296,7 +296,7 @@ window.HUNT_CONFIG = {
     }, // moved 45 m
     {
       id: "item12",
-      name: "Item 12",
+      name: "お宝 12",
       code: "N9CJ5V",
       lat: 36.1091853,
       lng: 140.101642,
@@ -304,7 +304,7 @@ window.HUNT_CONFIG = {
     }, // moved 10.0 m
     {
       id: "item13",
-      name: "Item 13",
+      name: "お宝 13",
       code: "L3PD7X",
       lat: 36.1096273,
       lng: 140.1012826,
