@@ -322,5 +322,5 @@ window.HUNT_CONFIG = {
   },
   // Testing without walking: set true, or add ?sim=1 to the URL.
   // Then tapping the map moves your "GPS position" there.
-  SIMULATE_GPS: true,
+  SIMULATE_GPS: false,
 };
