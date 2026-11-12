@@ -87,7 +87,7 @@ window.HUNT_CONFIG = {
   // true = available (for setting up / scouting), false = gone entirely: no 🛠
   // buttons, and any boundary/spot edits applied on a phone are ignored.
   // Keep it false for the event.
-  DEBUG_TOOLS: false,
+  DEBUG_TOOLS: true,
 
   // ---- Map ---------------------------------------------------------------
   TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -253,8 +253,8 @@ window.HUNT_CONFIG = {
       id: "item06",
       name: "お宝 6",
       code: "H3XT7N",
-      lat: 36.1029291,
-      lng: 140.1032982,
+      lat: 36.1027292,
+      lng: 140.1032408,
       hint: "階段を下りて進むと\n静けさに包まれた小さな森がある\n秋に想いを馳せる者のそばに\n小さな宝物が眠っている。",
     },
     {
