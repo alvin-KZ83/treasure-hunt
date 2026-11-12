@@ -83,8 +83,11 @@ window.HUNT_CONFIG = {
   // ---- Debug / scouting ----------------------------------------------------
   // Shows a 🛠 button (map controls + start screen) that toggles a debug view:
   // every item's pin and radius, your live GPS reading, and "Mark spot" to
-  // record GPS points while you walk, then download them. Set false for the event.
-  DEBUG_TOOLS: true,
+  // record GPS points while you walk, then download them.
+  // true = available (for setting up / scouting), false = gone entirely: no 🛠
+  // buttons, and any boundary/spot edits applied on a phone are ignored.
+  // Keep it false for the event.
+  DEBUG_TOOLS: false,
 
   // ---- Map ---------------------------------------------------------------
   TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
