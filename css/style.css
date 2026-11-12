@@ -673,6 +673,7 @@ body:not(.running) #bottombar {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-items: flex-end;
 }
 #controls button {
   width: 48px;
@@ -691,29 +692,34 @@ body:not(.running) #bottombar {
   background: #2563eb;
   color: #fff;
 }
-#controls button:active {
-  transform: scale(0.94);
-}
 /* reward picture badge: thumbnail of the pieces found so far, tap = full screen */
-#controls {
-  align-items: flex-end;
-}
+
 #controls .reward-badge {
   position: relative;
-  width: auto;
-  min-width: 48px;
-  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 5rem;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 1318 / 1086;
+
   padding: 0;
   background: #0f172a;
-  overflow: visible;
   border: 2px solid #fff;
+  border-radius: 14px;
+  overflow: visible;
 }
+
 #reward-thumb {
   display: block;
+  width: 100%;
   height: 100%;
-  max-width: 92px;
+  min-width: 0;
   border-radius: 12px;
 }
+
 #reward-count {
   position: absolute;
   left: -8px;
@@ -738,10 +744,6 @@ body:not(.running) #bottombar {
 body:not(.running) #btn-reward {
   display: none;
 }
-#controls #btn-locate.active {
-  background: #2563eb;
-  color: #fff;
-}
 
 #bottombar {
   position: fixed;
@@ -761,19 +763,22 @@ body:not(.running) #btn-reward {
   justify-content: center;
 }
 
+/* Treasure list */
 .list-btn {
-  flex: none;
-  padding: 14px 16px;
-  border-radius: 999px;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 14px 12px;
   background: #fff;
   font-weight: 700;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
 }
+
+/* QR scanner */
 .scan-btn {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
-  padding: 15px 18px;
-  border-radius: 999px;
+  max-width: 15rem;
+  padding: 15px 12px;
   background: var(--ink);
   color: #fff;
   font-weight: 700;
@@ -782,8 +787,22 @@ body:not(.running) #btn-reward {
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-  max-width: 15rem;
 }
+
+@media (max-width: 480px) {
+  #bottombar .list-btn,
+  #bottombar .scan-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 14px;
+  }
+
+  #bottombar .icon-btn {
+    gap: 5px;
+  }
+}
+
 /* at an item that hasn't been scanned yet */
 .scan-btn.ready {
   background: var(--ok);
@@ -828,7 +847,7 @@ body:not(.running) #btn-reward {
 }
 #sheet h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 24px;
 }
 #btn-sheet-close {
   width: 40px;
@@ -890,7 +909,42 @@ body:not(.running) #btn-reward {
 }
 #item-list small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
+}
+#item-list strong {
+  font-size: 20px;
+}
+
+/* ============================================================
+   PUZZLE STATUS — ITEM LIST
+   ============================================================ */
+
+/* Keep spaces between the puzzle emoji and text */
+#item-list .info small {
+  white-space: pre-wrap;
+}
+
+/* Default: puzzle not answered */
+#item-list li.quiz-open .info small {
+  color: #64748b;
+}
+
+/* Puzzle in progress */
+#item-list li.quiz-progress .info small {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Puzzle solved */
+#item-list li.quiz-solved .info small {
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* No attempts remaining */
+#item-list li.quiz-locked .info small {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 /* ----------------------------------------------- start / finish screens */
@@ -1124,51 +1178,8 @@ button.big {
 .modal-body .error {
   color: var(--danger);
 }
-.code-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.modal-body .error {
-  color: var(--danger);
-}
 
 /* item puzzle (item pop-up) and the ring a solved one shows on the map */
-.view-tabs {
-  display: flex;
-  gap: 3px;
-  padding: 3px;
-  margin: 0 0 12px;
-  border-radius: 12px;
-  background: #f1f5f9;
-}
-.modal .view-tabs button {
-  flex: 1;
-  margin: 0;
-  padding: 8px 4px;
-  border-radius: 9px;
-  font-size: 14px;
-  color: var(--muted);
-  background: none;
-}
-.modal .view-tabs button.on {
-  background: #fff;
-  color: var(--ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-}
-.item-view[data-show="puzzle"] .item-hint,
-.item-view[data-show="hint"] .quiz-img,
-.item-view[data-show="hint"] .quiz-question,
-.item-view[data-show="hint"] .quiz > p.error:not(.quiz-msg) {
-  display: none; /* Hint view hides only the picture: the answer box stays */
-}
-.quiz-img {
-  display: block;
-  width: 100%;
-  max-height: 55dvh;
-  object-fit: contain;
-  border-radius: 12px;
-  background: #f1f5f9;
-}
 /* the easy puzzles are 3:4 portrait: keep that shape, as big as fits */
 .quiz-img.easy {
   width: auto;
@@ -1181,40 +1192,6 @@ button.big {
 }
 .quiz .view-tabs {
   margin-top: 4px;
-}
-.quiz-question {
-  margin: 10px 0 0;
-  font-weight: 600;
-}
-.modal-body .quiz-msg {
-  margin: 10px 0 0;
-}
-.quiz-input {
-  width: 100%;
-  margin-top: 8px;
-  padding: 13px 14px;
-  border-radius: 12px;
-  border: 2px solid var(--line);
-  font: inherit;
-  font-size: 18px;
-  text-align: center;
-}
-.quiz-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.quiz-ring {
-  stroke: var(--quiz-ring);
-  fill: var(--quiz-ring);
-  fill-opacity: 0.1;
-}
-.poi-pin.quiz-pin {
-  width: 30px;
-  height: 30px;
-  font-size: 13px;
-  background: var(--quiz-ring);
-  opacity: 0.9;
-  border-style: dashed;
 }
 
 /* ------------------------------------------------- reward picture */
@@ -1230,13 +1207,49 @@ button.big {
   justify-content: center;
   gap: 14px;
   padding: calc(var(--st) + 20px) 16px calc(var(--sb) + 20px);
-  background: #fff; /* plain white behind the picture */
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(3px);
   color: var(--ink);
   text-align: center;
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
+  perspective: 1400px;
 }
+
+/* White translucent card behind the reward content */
+#reward::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: min(480px, calc(100% - 32px));
+  height: min(450px, calc(100dvh - 80px));
+
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.25);
+
+  pointer-events: none;
+}
+
+/* Keep the reward content above the card */
+#reward > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Dark text on the white card */
+#reward h2 {
+  color: var(--ink);
+}
+
+#reward-sub {
+  color: var(--muted);
+}
+
 #reward[hidden] {
   display: none;
 }
@@ -1272,9 +1285,6 @@ button.big {
 }
 
 /* the picture is a card: after the last find it turns over to the secret question */
-#reward {
-  perspective: 1400px;
-}
 .reward-card {
   position: relative;
   width: 100%;
@@ -1319,6 +1329,7 @@ button.big {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
+  color: white;
 }
 #secret-input {
   width: 100%;
@@ -1360,6 +1371,36 @@ button.big {
   filter: none;
   animation: none;
 }
+
+/* ============================================================
+   SECRET QUESTION — FINAL REWARD
+   ============================================================ */
+
+/* Hide the white reward card during the secret question */
+#reward:has(.reward-card.flipped)::before {
+  display: none;
+}
+
+/* Make the final question title readable */
+#reward:has(.reward-card.flipped) h2 {
+  color: #ffffff;
+}
+
+/* White text inside the dark purple card */
+#reward .reward-face.back {
+  color: #ffffff;
+}
+
+#reward #secret-question {
+  color: #ffffff;
+}
+
+/* Instructions inside the secret question */
+#reward .reward-face.back small {
+  color: #e2e8f0;
+  opacity: 0.85;
+}
+
 @keyframes reward-shine {
   0%,
   100% {
@@ -1481,8 +1522,7 @@ button.big {
 /* Tabs are after the quiz in app.js. Keep them at the bottom when short,
    and visible near the bottom while scrolling longer content. */
 .item-view .view-tabs {
-  margin-top: auto;
-  margin-bottom: 0;
+  margin: 1rem 0;
   position: sticky;
   bottom: 0;
   z-index: 1;
@@ -1524,16 +1564,21 @@ button.big {
   background: none;
 }
 .modal .view-tabs button.on {
-  background: #fff;
+  background: #fcdbc9;
   color: var(--ink);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
-.item-view[data-show="puzzle"] .item-hint,
-.item-view[data-show="hint"] .quiz-img,
-.item-view[data-show="hint"] .quiz-question,
-.item-view[data-show="hint"] .quiz > p.error:not(.quiz-msg) {
-  display: none; /* Hint view hides only the picture: the answer box stays */
+
+/* Puzzle view: hide the hint */
+.item-view[data-show="puzzle"] .item-hint {
+  display: none;
 }
+
+/* Hint view: hide the entire puzzle section */
+.item-view[data-show="hint"] .quiz {
+  display: none;
+}
+
 .quiz-img {
   display: block;
   width: 100%;
@@ -1547,7 +1592,7 @@ button.big {
   font-weight: 600;
 }
 .modal-body .quiz-msg {
-  margin: 10px 0 0;
+  margin: 1rem 0;
 }
 .quiz-input {
   width: 100%;
@@ -1573,6 +1618,7 @@ button.big {
   height: 30px;
   font-size: 13px;
   background: rgba(147, 51, 234, 0.85);
+  opacity: 0.9;
   border-style: dashed;
 }
 .quiz-form button.primary {

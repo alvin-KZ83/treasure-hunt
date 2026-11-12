@@ -172,7 +172,9 @@
   const completedAt = (s) =>
     s?.completedAt ||
     (s && ITEMS.every((p) => s.items[p.id]?.foundAt)
-      ? ITEMS.map((p) => s.items[p.id].foundAt).sort().pop()
+      ? ITEMS.map((p) => s.items[p.id].foundAt)
+          .sort()
+          .pop()
       : null);
   // The hunt time: start → last find, or start → now while still hunting.
   const huntEnd = (s) => completedAt(s) || s.finishedAt || nowIso();
@@ -784,7 +786,11 @@
         title: "📍 位置情報がブロックされています",
         body: "宝探しには位置情報が必要です。\n\nChrome のアドレスバー左のアイコン → 権限 → 位置情報 → 許可 にしてから、再読み込みしてください。進み具合は保存されています。",
         buttons: [
-          { label: "再読み込み", primary: true, action: () => location.reload() },
+          {
+            label: "再読み込み",
+            primary: true,
+            action: () => location.reload(),
+          },
           { label: "閉じる" },
         ],
       });
@@ -1233,32 +1239,60 @@
   function renderList() {
     const ol = $("#item-list");
     ol.textContent = "";
+
     for (const p of [...ITEMS, ORIGIN]) {
       const origin = p === ORIGIN;
       const rec = state.session?.items[p.id];
       const done = isFound(p.id);
+
       const li = document.createElement("li");
       li.className = origin ? "origin" : done ? "done" : "";
+
       let sub = origin
         ? "スタート / ゴール地点"
         : done
           ? `${clockTime(rec.foundAt)} に発見${rec.method === "manual" ? " · コード入力" : ""}`
           : "まだ見つけていません";
+
+      // Puzzle status (only for treasures not yet found)
+
       if (!origin && !done && p.quiz && state.session) {
         const st = quizState(p);
-        sub +=
+        const attempts = quizOf(p.id).tries;
+
+        const status = st === "open" && attempts > 0 ? "progress" : st;
+
+        li.classList.add(`quiz-${status}`);
+
+        const message =
           st === "solved"
-            ? " · 🧩 正解"
+            ? "解決済み · 地図を確認"
             : st === "locked"
-              ? " · 🧩 回答できません"
-              : ` · 🧩 残り ${triesLeft(p)}/${QUIZ_TRIES} 回`;
+              ? "回答不可"
+              : attempts > 0
+                ? `挑戦中 · 残り${triesLeft(p)}回`
+                : `未解決 · 残り${triesLeft(p)}回`;
+
+        sub = `🧩\u00A0\u00A0${message}`;
       }
+
+      // Distance when all treasure locations are revealed
       if (state.pos && C.REVEAL_POIS && !done) {
         sub += ` · ${Geo.formatDistance(Geo.distance(state.pos, p))} ${Geo.compass(Geo.bearing(state.pos, p))}`;
       }
-      li.innerHTML = `<span class="num">${origin ? "🏁" : done ? "✓" : p.index}</span>
-        <span class="info"><strong>${esc(p.name)}</strong><small>${esc(sub)}</small></span>
-        ${p.hint ? '<span class="hint-tag" aria-label="ヒントあり">💡</span>' : ""}<span class="chev" aria-hidden="true">›</span>`;
+
+      li.innerHTML = `
+      <span class="num">
+        ${origin ? "🏁" : done ? "✓" : p.index}
+      </span>
+      <span class="info">
+        <strong>${esc(p.name)}</strong>
+        <small>${esc(sub)}</small>
+      </span>
+      ${p.hint ? '<span class="hint-tag" aria-label="ヒントあり">💡</span>' : ""}
+      <span class="chev" aria-hidden="true">›</span>
+    `;
+
       li.onclick = () => openItemInfo(p);
       ol.append(li);
     }
@@ -1320,8 +1354,8 @@
         };
 
         for (const [view, label] of [
-          ["puzzle", "🧩 謎"],
-          ["hint", "💡 ヒント"],
+          ["puzzle", "🧩\u00A0\u00A0 謎"],
+          ["hint", "💡\u00A0\u00A0 ヒント"],
           ["both", "両方"],
         ]) {
           const b = document.createElement("button");
@@ -1992,11 +2026,7 @@
 
   function openRewardBadge() {
     if (!foundCount()) {
-      toast(
-        "🖼 お宝を見つけると、絵の最初のピースがもらえます",
-        "info",
-        3500,
-      );
+      toast("🖼 お宝を見つけると、絵の最初のピースがもらえます", "info", 3500);
       return;
     }
     showReward(null);
@@ -2379,7 +2409,12 @@
     state.timers.forEach(clearInterval);
     state.timers = [setInterval(tick, 1000)];
     tick();
-    if (SIM) toast("シミュレーションモード：地図をタップすると移動します", "info", 7000);
+    if (SIM)
+      toast(
+        "シミュレーションモード：地図をタップすると移動します",
+        "info",
+        7000,
+      );
   }
 
   function tick() {
@@ -2441,10 +2476,7 @@
     const rows = [
       ["チーム", s.team],
       ["見つけたお宝", `${foundCount()} / ${ITEMS.length}`],
-      [
-        "タイム",
-        duration(Date.parse(huntEnd(s)) - Date.parse(s.startedAt)),
-      ],
+      ["タイム", duration(Date.parse(huntEnd(s)) - Date.parse(s.startedAt))],
       ["歩いた距離", Geo.formatDistance(walkedDistance(gps))],
       ...(C.SECRET
         ? [
