@@ -87,7 +87,7 @@ window.HUNT_CONFIG = {
   // true = available (for setting up / scouting), false = gone entirely: no 🛠
   // buttons, and any boundary/spot edits applied on a phone are ignored.
   // Keep it false for the event.
-  DEBUG_TOOLS: true,
+  DEBUG_TOOLS: false,
 
   // ---- Map ---------------------------------------------------------------
   TILE_URL: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
